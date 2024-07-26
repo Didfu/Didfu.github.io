@@ -7,9 +7,33 @@
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@1.2.0/dist/aframe-master.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@1.2.0/dist/aframe-physics-system.min.js"></script>
+    <style>
+      #dropdown-menu {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(51, 51, 51, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+      }
+      #dropdown-menu div {
+        padding: 5px;
+        color: white;
+        cursor: pointer;
+      }
+      #dropdown-menu div:hover {
+        background: rgba(85, 85, 85, 0.8);
+      }
+    </style>
   </head>
   <body style="margin: 0; overflow: hidden;">
-    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' touch-controls>
+    <div id="dropdown-menu">
+      <div>Select Room</div>
+      <div style="display: none;">Room 1</div>
+      <div style="display: none;">Room 2</div>
+    </div>
+
+    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' shadow="type: pcfsoft">
       <!-- Marker for starting point -->
       <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="start-marker">
         <a-box position="0 0.5 0" material="color: green;"></a-box>
@@ -30,39 +54,25 @@
         </a-entity>
       </a-marker>
 
-      <!-- Camera with dropdown menu and spinning box -->
-      <a-entity camera>
-        <!-- Dropdown Menu at the top of the screen -->
-        <a-entity id="dropdown-menu" position="0 1.5 -2" rotation="0 0 0">
-          <a-plane width="1" height="0.2" color="#333" text="value: Select Room; color: #FFF;"></a-plane>
-          <a-plane position="0 -0.3 0" width="1" height="0.2" color="#555" text="value: Room 1; color: #FFF;" visible="false"></a-plane>
-          <a-plane position="0 -0.6 0" width="1" height="0.2" color="#555" text="value: Room 2; color: #FFF;" visible="false"></a-plane>
-        </a-entity>
-      </a-entity>
+      <!-- Camera with spinning box -->
+      <a-entity camera></a-entity>
 
-      <!-- Plane for the spinning box -->
-      <a-plane position="0 0 -3" width="5" height="5" color="#CCCCCC"></a-plane>
-
-      <!-- Spinning box -->
-      <a-box id="spinning-box" position="0 0.5 -3" depth="0.5" height="0.5" width="0.5" color="blue" animation="property: rotation; to: 0 360 0; loop: true; dur: 3000"></a-box>
+      <!-- Spinning box with shadow -->
+      <a-box id="spinning-box" position="0 0.5 -3" depth="0.5" height="0.5" width="0.5" color="blue" shadow="cast: true" animation="property: rotation; to: 0 360 0; loop: true; dur: 3000"></a-box>
+      
+      <!-- Light for casting shadow -->
+      <a-light type="directional" position="0 10 0" intensity="0.5" castShadow="true"></a-light>
+      <a-light type="ambient" intensity="0.5"></a-light>
     </a-scene>
 
     <script>
       // JavaScript to handle dropdown visibility
-      document.querySelector('#dropdown-menu').addEventListener('click', function () {
-        const options = this.querySelectorAll('a-plane:not(:first-child)');
-        options.forEach(option => {
-          option.setAttribute('visible', !option.getAttribute('visible'));
-        });
-      });
-
-      // JavaScript to handle touch movement for the spinning box
-      document.querySelector('a-scene').addEventListener('touchstart', function (evt) {
-        const touch = evt.touches[0];
-        const box = document.querySelector('#spinning-box');
-        const touchX = (touch.clientX / window.innerWidth) * 2 - 1; // Normalize to range [-1, 1]
-        const touchY = -(touch.clientY / window.innerHeight) * 2 + 1; // Normalize to range [-1, 1]
-        box.setAttribute('position', {x: touchX * 2.5, y: 0.5, z: -3}); // Adjust multiplier for range
+      document.querySelector('#dropdown-menu div:first-child').addEventListener('click', function () {
+        const options = this.nextElementSibling;
+        while (options) {
+          options.style.display = options.style.display === 'none' ? 'block' : 'none';
+          options = options.nextElementSibling;
+        }
       });
     </script>
   </body>
