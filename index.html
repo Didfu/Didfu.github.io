@@ -11,6 +11,7 @@
     body {
       margin: 0;
       overflow: hidden;
+      font-family: Arial, sans-serif;
     }
     #ar-view {
       position: absolute;
@@ -44,15 +45,14 @@
     </div>
   </header>
   <div id="ar-view"></div>
-  
+
   <script type="module">
-    import {WebXRButton} from './js/util/webxr-button.js';
-    import {Scene} from './js/render/scenes/scene.js';
-    import {Renderer, createWebGLContext} from './js/render/core/renderer.js';
-    import {InlineViewerHelper} from './js/util/inline-viewer-helper.js';
+    import { WebXRButton } from './js/util/webxr-button.js';
+    import { Scene } from './js/render/scenes/scene.js';
+    import { Renderer, createWebGLContext } from './js/render/core/renderer.js';
+    import { InlineViewerHelper } from './js/util/inline-viewer-helper.js';
     import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
 
-    // Initialize variables
     let xrButton = null;
     let xrImmersiveRefSpace = null;
     let inlineViewerHelper = null;
@@ -60,7 +60,6 @@
     let renderer = null;
     let scene = new Scene();
 
-    // Initialize WebXR
     function initXR() {
       xrButton = new WebXRButton({
         onRequestSession: onRequestSession,
@@ -69,13 +68,10 @@
         textXRNotFoundTitle: "AR NOT FOUND",
         textExitXRTitle: "EXIT AR",
       });
+
+      // Hide XR button as we are starting AR automatically
+      xrButton.domElement.style.display = 'none';
       document.querySelector('header').appendChild(xrButton.domElement);
-      if (navigator.xr) {
-        navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-          xrButton.enabled = supported;
-        });
-        navigator.xr.requestSession('inline').then(onSessionStarted);
-      }
     }
 
     function onRequestSession() {
@@ -141,7 +137,13 @@
       scene.endFrame();
     }
 
-    initXR();
+    // Initialize AR session automatically when the page loads
+    window.addEventListener('load', () => {
+      initXR();
+      if (navigator.xr) {
+        navigator.xr.requestSession('immersive-ar').then(onSessionStarted);
+      }
+    });
   </script>
 </body>
 </html>
