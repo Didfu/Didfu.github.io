@@ -14,11 +14,15 @@
     <script>
         // Check if the browser supports WebXR
         if ('xr' in navigator) {
-            // Your WebXR code can go here
-            console.log('WebXR is supported! 🌟');
-        } else {
-            console.error('WebXR is not supported. 😢');
-        }
+    navigator.xr.requestDevice().then((device) => {
+        // Device is ready! You can start your AR dance here.
+    }).catch((error) => {
+        // Oops, permission denied or not supported.
+        console.error('Permission denied or WebXR not supported.');
+    });
+} else {
+    console.error('WebXR not available in this browser.');
+}
     </script>
 
     <!-- Include your JavaScript libraries (e.g., Three.js) here -->
