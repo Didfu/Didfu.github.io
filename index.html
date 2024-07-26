@@ -1,21 +1,78 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset='utf-8'>
-    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GeoAR.js demo</title>
-    <script src='https://aframe.io/releases/0.9.2/aframe.min.js'></script>
-    <script src="https://rawcdn.githack.com/jeromeetienne/AR.js/aframe/2.3.1/aframe-ar.js"></script>
-    <script src="https://rawcdn.githack.com/donmccurdy/aframe-extras/v6.1.2/dist/aframe-extras.loaders.min.js"></script>
-    <script>
-        THREEx.ArToolkitContext.baseURL = 'https://rawcdn.githack.com/jeromeetienne/ar.js/aframe/2.3.1/three.js/';
-    </script>
-</head>
-<body style='margin: 0; overflow: hidden;'>
-    <a-scene vr-mode-ui="enabled: false" embedded arjs='sourceType: webcam; sourceWidth:1280; sourceHeight:960; displayWidth: 1280; displayHeight: 960; debugUIEnabled: false;'>
-        <a-camera gps-camera rotation-reader></a-camera>
-    </a-scene>
-</body>
-</html>
+{% extends "encyclopedia/layout.html" %}
 
+{% block title %}
+    Encyclopedia
+{% endblock %}
+
+{% block body %}
+
+<h1>You can Start Browsing From Here or Just type in the Search</h1>
+<style>
+    /* Add CSS styles for the boxes */
+    body {
+                    background-image:url("https://wallpapers.com/images/hd/faded-background-chi2uxjo9a9sh78y.jpg");
+                    background-repeat: repeat;
+                    background-size: cover;
+                }
+    .box {
+        display: inline-block;
+        width: 200px;
+        height: 200px;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        text-align: center;
+        margin: 10px;
+        padding: 25px;
+        box-shadow: 5px 5px 5px #ccc;
+        cursor: pointer;
+    }
+    .box:hover {
+        background-color: #f9f9f9;
+    }
+    .icon {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding-top: 40px;
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .box.animated {
+            animation: buttonAnimation 0.5s;
+        }
+        
+        @keyframes buttonAnimation {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(0.82);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        </style>
+    <div class="box" onclick="animateButton(event,'/wiki/DEPARTMENTS')">
+        <a href="/wiki/DEPARTMENTS">
+            <i class="icon fa fa-home"></i>
+            <p>DEPARTMENTS</p>
+        </a>
+    </div>
+
+    <script>
+        function animateButton(event, redirectUrl) {
+            event.preventDefault();
+            const button = event.currentTarget;
+            button.classList.add('animated');
+            setTimeout(() => {
+                button.classList.remove('animated'); // Remove the 'animated' class after the animation is complete
+                window.location.href = redirectUrl;
+            }, 1000);
+        }
+        </script>
+
+{% endblock %}
