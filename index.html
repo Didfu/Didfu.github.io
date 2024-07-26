@@ -12,7 +12,7 @@
   </style>
 </head>
 <body>
-  <button id="start-ar-button">Start AR</button>
+  <button id="start-ar-button">StartD AR</button>
   <div id="ar-view"></div>
   <div id="overlay">
     <select id="room-select">
@@ -25,7 +25,7 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
 
   <script>
-    let xrButton, gl, renderer, scene, camera, arrow;
+    let xrButton, gl, renderer, scene, camera, arrow, xrSession, xrRefSpace;
     const targetLat = 18.9576799;
     const targetLon = 72.8097855;
     const targetPosition = new THREE.Vector3(targetLat / 100, targetLon / 100, -5); // Example conversion
@@ -68,26 +68,26 @@
     }
 
     async function onSessionStarted(session) {
-      session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
+      xrSession = session;
+      xrRefSpace = await xrSession.requestReferenceSpace('local');
+      xrSession.updateRenderState({ baseLayer: new XRWebGLLayer(xrSession, gl) });
 
-      const referenceSpace = await session.requestReferenceSpace('local');
-      session.requestAnimationFrame((time, frame) => onXRFrame(time, frame, referenceSpace));
-
-      session.addEventListener('end', () => {
+      xrSession.requestAnimationFrame(onXRFrame);
+      xrSession.addEventListener('end', () => {
         xrButton.style.display = 'block';
         document.getElementById('overlay').style.display = 'block';
       });
     }
 
-    function onXRFrame(time, frame, referenceSpace) {
-      const pose = frame.getViewerPose(referenceSpace);
+    function onXRFrame(time, frame) {
+      const pose = frame.getViewerPose(xrRefSpace);
 
       if (pose) {
         updateArrowDirection();
         renderer.render(scene, camera);
       }
 
-      frame.session.requestAnimationFrame((time, frame) => onXRFrame(time, frame, referenceSpace));
+      frame.session.requestAnimationFrame(onXRFrame);
     }
 
     function updateArrowDirection() {
