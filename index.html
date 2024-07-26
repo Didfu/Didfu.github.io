@@ -21,21 +21,6 @@
       height: 100%;
       z-index: 0;
     }
-    #menu {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background-color: rgba(255, 255, 255, 0.8);
-      border: 2px solid black;
-      padding: 10px;
-      border-radius: 5px;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-    }
-    #room-select {
-      margin-top: 5px;
-    }
     #start-ar-button {
       position: absolute;
       top: 50%;
@@ -54,14 +39,7 @@
 </head>
 <body>
   <div id="ar-view"></div>
-  <div id="menu">
-    <label for="room-select">Select Roooom:</label>
-    <select id="room-select">
-      <option value="">-- Select Room --</option>
-      <!-- Room options will be added here -->
-    </select>
-  </div>
-  <button id="start-ar-button">Start AR</button>
+  <button id="start-ar-button">Start CAR</button>
 
   <script type="module">
     import { WebXRButton } from './js/util/webxr-button.js';
@@ -69,6 +47,7 @@
     import { Renderer, createWebGLContext } from './js/render/core/renderer.js';
     import { InlineViewerHelper } from './js/util/inline-viewer-helper.js';
     import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
+    import { Mesh, PlaneGeometry, MeshBasicMaterial, CanvasTexture, TextureLoader, OrthographicCamera } from 'three';
 
     let xrButton = null;
     let xrImmersiveRefSpace = null;
@@ -76,6 +55,35 @@
     let gl = null;
     let renderer = null;
     let scene = new Scene();
+    let arViewCanvas = null;
+
+    // Create a 3D UI Overlay as a HUD
+    function createUIOverlay() {
+      const textureCanvas = document.createElement('canvas');
+      textureCanvas.width = 256;
+      textureCanvas.height = 256;
+      const context = textureCanvas.getContext('2d');
+      
+      // Draw a dropdown menu-like UI on the canvas
+      context.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      context.fillRect(0, 0, 256, 256);
+      context.fillStyle = 'black';
+      context.font = '20px Arial';
+      context.fillText('Select Room:', 10, 30);
+      context.fillRect(10, 50, 200, 30);
+      context.fillStyle = 'grey';
+      context.fillRect(15, 55, 190, 20);
+
+      const texture = new CanvasTexture(textureCanvas);
+      const material = new MeshBasicMaterial({ map: texture, transparent: true });
+      const geometry = new PlaneGeometry(1, 1);
+      const plane = new Mesh(geometry, material);
+
+      plane.position.set(0, 0, -1.5); // Adjust position to be in front of the user
+      plane.scale.set(1, 1, 1); // Adjust size to fit the AR view
+
+      scene.addNode(plane);
+    }
 
     function initXR() {
       xrButton = new WebXRButton({
@@ -86,10 +94,6 @@
         textExitXRTitle: "EXIT AR",
       });
 
-      // Hide XR button as we are starting AR automatically
-      xrButton.domElement.style.display = 'none';
-      document.getElementById('start-ar-button').style.display = 'block';
-      
       document.getElementById('start-ar-button').addEventListener('click', () => {
         document.getElementById('start-ar-button').style.display = 'none';
         navigator.xr.requestSession('immersive-ar').then(onSessionStarted);
@@ -122,6 +126,7 @@
     function onSessionStarted(session) {
       session.addEventListener('end', onSessionEnded);
       initGL();
+      createUIOverlay(); // Create the HUD overlay in the AR view
       session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
       let refSpaceType = session.isImmersive ? 'local' : 'viewer';
       session.requestReferenceSpace(refSpaceType).then((refSpace) => {
