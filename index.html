@@ -7,70 +7,20 @@
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   </head>
   <body style="margin: 0; overflow: hidden;">
-    <a-scene embedded arjs>
+    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;'>
       <!-- Marker for starting point -->
-      <a-marker preset="hiro" id="start-marker">
+      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="start-marker">
         <a-box position="0 0.5 0" material="color: green;"></a-box>
         <a-text value="Start" position="0 1 0"></a-text>
       </a-marker>
 
       <!-- Marker for destination point -->
-      <a-marker preset="kanji" id="end-marker">
+      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-kanji.patt" id="end-marker">
         <a-box position="0 0.5 0" material="color: red;"></a-box>
         <a-text value="End" position="0 1 0"></a-text>
       </a-marker>
 
-      <a-entity camera position="0 1.6 0"></a-entity>
+      <a-entity camera position="0 0 0"></a-entity>
     </a-scene>
-
-    <button id="download-logs">Download Logs</button>
-
-    <script>
-      let logs = '';
-
-      function logMessage(message) {
-        console.log(message);
-        logs += message + '\n';
-      }
-
-      document.querySelector('#start-marker').addEventListener('markerFound', () => {
-        logMessage('Start marker found');
-      });
-
-      document.querySelector('#start-marker').addEventListener('markerLost', () => {
-        logMessage('Start marker lost');
-      });
-
-      document.querySelector('#end-marker').addEventListener('markerFound', () => {
-        logMessage('End marker found');
-      });
-
-      document.querySelector('#end-marker').addEventListener('markerLost', () => {
-        logMessage('End marker lost');
-      });
-
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(position => {
-          const { latitude, longitude } = position.coords;
-          logMessage(`Latitude: ${latitude}, Longitude: ${longitude}`);
-        }, error => {
-          logMessage('Error getting location: ' + error.message);
-        });
-      } else {
-        logMessage('Geolocation is not supported by your browser');
-      }
-
-      document.getElementById('download-logs').addEventListener('click', () => {
-        const blob = new Blob([logs], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'logs.txt';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      });
-    </script>
   </body>
 </html>
