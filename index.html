@@ -22,36 +22,54 @@
       <a-entity camera="fov: 80" position="0 1.6 3"></a-entity>
     </a-scene>
 
+    <button id="download-logs">Download Logs</button>
+
     <script>
+      let logs = '';
+
+      function logMessage(message) {
+        console.log(message);
+        logs += message + '\n';
+      }
+
       document.querySelector('#start-marker').addEventListener('markerFound', () => {
-        alert('Start marker found');
+        logMessage('Start marker found');
       });
 
       document.querySelector('#start-marker').addEventListener('markerLost', () => {
-        alert('Start marker lost');
+        logMessage('Start marker lost');
       });
 
       document.querySelector('#end-marker').addEventListener('markerFound', () => {
-        alert('End marker found');
+        logMessage('End marker found');
       });
 
       document.querySelector('#end-marker').addEventListener('markerLost', () => {
-        alert('End marker lost');
+        logMessage('End marker lost');
       });
 
-      // Example Geolocation API usage
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(position => {
           const { latitude, longitude } = position.coords;
-          alert(`Latitude: ${latitude}, Longitude: ${longitude}`);
-          // Update AR elements based on GPS data
-          // This part is simplified, you would need to convert GPS data to 3D positions
+          logMessage(`Latitude: ${latitude}, Longitude: ${longitude}`);
         }, error => {
-          alert('Error getting location: ' + error.message);
+          logMessage('Error getting location: ' + error.message);
         });
       } else {
-        alert('Geolocation is not supported by your browser');
+        logMessage('Geolocation is not supported by your browser');
       }
+
+      document.getElementById('download-logs').addEventListener('click', () => {
+        const blob = new Blob([logs], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'logs.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
     </script>
   </body>
 </html>
