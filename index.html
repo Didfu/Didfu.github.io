@@ -17,15 +17,37 @@
         <p>
           This sample demonstrates how to use an 'immersive-ar' XRSession to
           present a simple WebGL scene to a transparent or passthrough XR
-          device. 
+          device. The logic is largely the same as the corresponding VR sample,
+          with the primary difference being that no background is rendered and
+          the model is scaled down for easier viewing in a real-world space.
           <a class="back" href="./">Back</a>
         </p>
       </details>
     </header>
     <script type="module">
+      import {WebXRButton} from './js/util/webxr-button.js';
+      import {Scene} from './js/render/scenes/scene.js';
+      import {Renderer, createWebGLContext} from './js/render/core/renderer.js';
+      import {SkyboxNode} from './js/render/nodes/skybox.js';
+      import {InlineViewerHelper} from './js/util/inline-viewer-helper.js';
+      import {Gltf2Node} from './js/render/nodes/gltf2.js';
+      import {QueryArgs} from './js/util/query-args.js';
+
+      import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
+      if (QueryArgs.getBool('usePolyfill', true)) {
+        let polyfill = new WebXRPolyfill();
+      }
       let xrButton = null;
       let xrImmersiveRefSpace = null;
+      let inlineViewerHelper = null;
       let gl = null;
+      let renderer = null;
+      let scene = new Scene();
+      let solarSystem = new Gltf2Node({url: 'media/gltf/space/space.gltf'});
+      solarSystem.scale = [0.1, 0.1, 0.1];
+      scene.addNode(solarSystem);
+      let skybox = new SkyboxNode({url: 'media/textures/milky-way-4k.png'});
+      scene.addNode(skybox);
 
       function initXR() {
         xrButton = new WebXRButton({
@@ -43,7 +65,6 @@
           navigator.xr.requestSession('inline').then(onSessionStarted);
         }
       }
-      
       function onRequestSession() {
         return navigator.xr.requestSession('immersive-ar')
             .then((session) => {
@@ -52,79 +73,57 @@
               onSessionStarted(session);
             });
       }
-      
       function initGL() {
-        if (gl) return;
+        if (gl)
+          return;
         gl = createWebGLContext({
           xrCompatible: true
         });
         document.body.appendChild(gl.canvas);
         function onResize() {
           gl.canvas.width = gl.canvas.clientWidth * window.devicePixelRatio;
-          gl.canvas.height = gl.canvas.clientHeight * window.devicePixelRatio;
-        }
+          gl.canvas.height = gl.canvas.clientHeight * window.devicePixelRatio;}
         window.addEventListener('resize', onResize);
         onResize();
-      }
-
+        renderer = new Renderer(gl);
+        scene.setRenderer(renderer);}
       function onSessionStarted(session) {
         session.addEventListener('end', onSessionEnded);
+        if (session.isImmersive) {
+          skybox.visible = false;}
         initGL();
         session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
-        session.requestReferenceSpace('local').then((refSpace) => {
-          xrImmersiveRefSpace = refSpace;
-          session.requestAnimationFrame(onXRFrame);
-        });
-      }
-
+        let refSpaceType = session.isImmersive ? 'local' : 'viewer';
+        session.requestReferenceSpace(refSpaceType).then((refSpace) => {
+          if (session.isImmersive) {
+            xrImmersiveRefSpace = refSpace;
+            xrImmersiveRefSpace.addEventListener('reset', (evt) => {
+              if (evt.transform) {
+                xrImmersiveRefSpace = xrImmersiveRefSpace.getOffsetReferenceSpace(evt.transform);}});
+          } else {
+            inlineViewerHelper = new InlineViewerHelper(gl.canvas, refSpace);}
+          session.requestAnimationFrame(onXRFrame);});}
       function onEndSession(session) {
         session.end();
       }
-
       function onSessionEnded(event) {
-        xrButton.setSession(null);
+        if (event.session.isImmersive) {
+          xrButton.setSession(null);
+          skybox.visible = true;
+        }
       }
-
       function onXRFrame(t, frame) {
         let session = frame.session;
-        let refSpace = xrImmersiveRefSpace;
+        let refSpace = session.isImmersive ?
+                         xrImmersiveRefSpace :
+                         inlineViewerHelper.referenceSpace;
         let pose = frame.getViewerPose(refSpace);
+        scene.startFrame();
         session.requestAnimationFrame(onXRFrame);
-
-        if (pose) {
-          const glLayer = session.renderState.baseLayer;
-          gl.bindFramebuffer(gl.FRAMEBUFFER, glLayer.framebuffer);
-          gl.clearColor(0.5, 0.5, 0.5, 1.0); // Set a grey color
-          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        }
+        scene.drawXRFrame(frame, pose);
+        scene.endFrame();
       }
-      
       initXR();
-
-      function createWebGLContext(options) {
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl', options);
-        return gl;
-      }
-      
-      class WebXRButton {
-        constructor({ onRequestSession, onEndSession, textEnterXRTitle, textXRNotFoundTitle, textExitXRTitle }) {
-          this.domElement = document.createElement('button');
-          this.domElement.textContent = textEnterXRTitle;
-          this.domElement.addEventListener('click', () => {
-            this.session ? onEndSession(this.session) : onRequestSession();
-          });
-          this.setSession = (session) => {
-            this.session = session;
-            this.domElement.textContent = session ? textExitXRTitle : textEnterXRTitle;
-          };
-          this.enabled = false;
-        }
-        set enabled(value) {
-          this.domElement.disabled = !value;
-          this.domElement.textContent = value ? this.domElement.textContent : 'AR NOT FOUND';
-        }
-      }
     </script>
   </body>
 </html>
