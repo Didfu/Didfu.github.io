@@ -13,13 +13,17 @@
     <!-- Your WebXR code goes here -->
     <script>
         // Check if the browser supports WebXR
-        if ('xr' in navigator) {
-    navigator.xr.requestDevice().then((device) => {
-        // Device is ready! You can start your AR dance here.
-    }).catch((error) => {
-        // Oops, permission denied or not supported.
-        console.error('Permission denied or WebXR not supported.');
-    });
+       if ('xr' in navigator) {
+    // Request AR session with lighting estimation and environment meshing
+    navigator.xr.requestSession({ mode: 'immersive-ar', lightingEstimation: true, environmentMeshing: true })
+        .then((session) => {
+            // Your AR code can go here
+            console.log('AR session started! 🌟');
+        })
+        .catch((error) => {
+            // Oops, permission denied or not supported.
+            console.error('Permission denied or WebXR not supported.');
+        });
 } else {
     console.error('WebXR not available in this browser.');
 }
