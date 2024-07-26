@@ -12,26 +12,42 @@
         <a-box position="0 0.5 0" material="color: green;"></a-box>
         <a-text value="Start" position="0 1 0"></a-text>
       </a-marker>
-      
+
       <!-- Marker for destination point -->
       <a-marker preset="kanji" id="end-marker">
         <a-box position="0 0.5 0" material="color: red;"></a-box>
         <a-text value="End" position="0 1 0"></a-text>
       </a-marker>
-      
-      <a-entity camera></a-entity>
+
+      <a-entity camera="fov: 80" position="0 1.6 3"></a-entity>
     </a-scene>
-    
+
     <script>
+      document.querySelector('#start-marker').addEventListener('markerFound', () => {
+        alert('Start marker found');
+      });
+
+      document.querySelector('#start-marker').addEventListener('markerLost', () => {
+        alert('Start marker lost');
+      });
+
+      document.querySelector('#end-marker').addEventListener('markerFound', () => {
+        alert('End marker found');
+      });
+
+      document.querySelector('#end-marker').addEventListener('markerLost', () => {
+        alert('End marker lost');
+      });
+
       // Example Geolocation API usage
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(position => {
           const { latitude, longitude } = position.coords;
-          console.log(`Latitude: ${latitude}, Longitude: ${longitude}`);
+          alert(`Latitude: ${latitude}, Longitude: ${longitude}`);
           // Update AR elements based on GPS data
           // This part is simplified, you would need to convert GPS data to 3D positions
         }, error => {
-          console.error('Error getting location', error);
+          alert('Error getting location: ' + error.message);
         });
       } else {
         alert('Geolocation is not supported by your browser');
