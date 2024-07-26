@@ -54,11 +54,10 @@
         </a-entity>
       </a-marker>
 
-      <!-- Camera with spinning box -->
-      <a-entity camera></a-entity>
-
-      <!-- Spinning box with shadow -->
-      <a-box id="spinning-box" position="0 0.5 -3" depth="0.5" height="0.5" width="0.5" color="blue" shadow="cast: true" animation="property: rotation; to: 0 360 0; loop: true; dur: 3000"></a-box>
+      <!-- Spinning box with shadow attached to starting marker -->
+      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="box-marker">
+        <a-box id="spinning-box" position="0 0.5 0" depth="0.5" height="0.5" width="0.5" color="blue" shadow="cast: true" animation="property: rotation; to: 0 360 0; loop: true; dur: 3000"></a-box>
+      </a-marker>
       
       <!-- Light for casting shadow -->
       <a-light type="directional" position="0 10 0" intensity="0.5" castShadow="true"></a-light>
