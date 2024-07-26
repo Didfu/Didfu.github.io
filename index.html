@@ -28,9 +28,9 @@
   </head>
   <body style="margin: 0; overflow: hidden;">
     <div id="dropdown-menu">
-      <div>Select Room</div>
-      <div style="display: none;">Room 1</div>
-      <div style="display: none;">Room 2</div>
+      <div id="select-room">Select Room</div>
+      <div class="room-option" style="display: none;">Room 1</div>
+      <div class="room-option" style="display: none;">Room 2</div>
     </div>
 
     <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' shadow="type: pcfsoft">
@@ -54,11 +54,12 @@
         </a-entity>
       </a-marker>
 
-      <!-- Spinning box with shadow attached to starting marker -->
-      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="box-marker">
-        <a-box id="spinning-box" position="0 0.5 0" depth="0.5" height="0.5" width="0.5" color="blue" shadow="cast: true" animation="property: rotation; to: 0 360 0; loop: true; dur: 3000"></a-box>
-      </a-marker>
+      <!-- Fixed box in the scene -->
+      <a-box id="fixed-box" position="0 0.5 -3" depth="0.5" height="0.5" width="0.5" color="blue" shadow="cast: true"></a-box>
       
+      <!-- Camera with look-controls -->
+      <a-entity camera look-controls></a-entity>
+
       <!-- Light for casting shadow -->
       <a-light type="directional" position="0 10 0" intensity="0.5" castShadow="true"></a-light>
       <a-light type="ambient" intensity="0.5"></a-light>
@@ -66,12 +67,10 @@
 
     <script>
       // JavaScript to handle dropdown visibility
-      document.querySelector('#dropdown-menu div:first-child').addEventListener('click', function () {
-        const options = this.nextElementSibling;
-        while (options) {
-          options.style.display = options.style.display === 'none' ? 'block' : 'none';
-          options = options.nextElementSibling;
-        }
+      document.querySelector('#select-room').addEventListener('click', function () {
+        document.querySelectorAll('.room-option').forEach(option => {
+          option.style.display = option.style.display === 'none' ? 'block' : 'none';
+        });
       });
     </script>
   </body>
