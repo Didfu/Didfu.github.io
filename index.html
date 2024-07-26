@@ -2,6 +2,7 @@
 <html>
   <head>
     <title>AR Navigation App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   </head>
@@ -19,8 +20,7 @@
         <a-text value="End" position="0 1 0"></a-text>
       </a-marker>
 
-      <!-- Adjusting the camera FOV and position -->
-      <a-entity camera="fov: 100" position="0 1.6 10"></a-entity>
+      <a-entity camera position="0 1.6 0"></a-entity>
     </a-scene>
 
     <button id="download-logs">Download Logs</button>
