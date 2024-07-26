@@ -28,15 +28,15 @@
         </a-entity>
       </a-marker>
 
-      <!-- Camera and square -->
+      <!-- Camera and square on a plane -->
       <a-entity camera>
-        <a-plane position="0 0 -3" width="0.5" height="0.5" color="blue"></a-plane>
+        <a-plane position="0 -1 -3" width="5" height="5" color="#CCCCCC"></a-plane>
+        <a-box position="0 0.25 -3" depth="0.5" height="0.5" width="0.5" color="blue"></a-box>
         <!-- Dropdown Menu -->
         <a-entity id="dropdown-menu" position="0 -0.5 -2" rotation="0 0 0">
-          <a-plane width="1" height="0.2" color="#333" text="value: Select Option; color: #FFF;"></a-plane>
-          <a-plane position="0 -0.3 0" width="1" height="0.2" color="#555" text="value: Option 1; color: #FFF;" visible="false"></a-plane>
-          <a-plane position="0 -0.6 0" width="1" height="0.2" color="#555" text="value: Option 2; color: #FFF;" visible="false"></a-plane>
-          <a-plane position="0 -0.9 0" width="1" height="0.2" color="#555" text="value: Option 3; color: #FFF;" visible="false"></a-plane>
+          <a-plane width="1" height="0.2" color="#333" text="value: Select Room; color: #FFF;"></a-plane>
+          <a-plane position="0 -0.3 0" width="1" height="0.2" color="#555" text="value: Room 1; color: #FFF;" visible="false"></a-plane>
+          <a-plane position="0 -0.6 0" width="1" height="0.2" color="#555" text="value: Room 2; color: #FFF;" visible="false"></a-plane>
         </a-entity>
       </a-entity>
     </a-scene>
