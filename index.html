@@ -116,6 +116,20 @@
             };
 
       document.body.appendChild(script);
+    function startCamera() {
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                const videoElement = document.createElement('video');
+                videoElement.srcObject = stream;
+                videoElement.play();
+                document.body.appendChild(videoElement);
+            })
+            .catch(err => {
+                console.error('Error accessing the camera: ', err);
+            });
+    }
+
+    window.onload = startCamera;
 
     </script>
   </body>
