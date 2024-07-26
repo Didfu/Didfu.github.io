@@ -20,6 +20,12 @@
         <a-text value="End" position="0 1 0"></a-text>
       </a-marker>
 
+      <!-- 3D Arrow pointing north -->
+      <a-entity id="north-arrow" position="0 1 0" rotation="0 0 0">
+        <a-cone position="0 1 0" radius-bottom="0.1" height="0.5" color="blue"></a-cone>
+        <a-cylinder position="0 0.5 0" radius="0.05" height="1" color="blue"></a-cylinder>
+      </a-entity>
+
       <a-entity camera position="0 0 0"></a-entity>
     </a-scene>
   </body>
