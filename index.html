@@ -1,305 +1,147 @@
-<html>
-  <head>
-    <meta charset='utf-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no'>
-    <meta name='mobile-web-app-capable' content='yes'>
-    <meta name='apple-mobile-web-app-capable' content='yes'>
-    <link rel='icon' type='image/png' sizes='32x32' href='favicon-32x32.png'>
-    <link rel='icon' type='image/png' sizes='96x96' href='favicon-96x96.png'>
-    <link rel='stylesheet' href='css/common.css'>
-    <title>Immersive AR Navigation</title>
-    <style>
-      body { margin: 0; overflow: hidden; }
-      #ar-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-      #floormap { position: absolute; bottom: 10px; left: 10px; width: 150px; height: 150px; border: 2px solid black; background-color: white; }
-      #menu { position: absolute; top: 10px; left: 10px; background-color: white; border: 2px solid black; padding: 5px; }
-      canvas { display: block; }
-    </style>
-  </head>
-  <body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="css/common.css">
+  <title>AR Session</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    #ar-view {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    #menu {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: white;
+      border: 2px solid black;
+      padding: 5px;
+      z-index: 1;
+    }
+    select {
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <header>
     <div id="menu">
-      <label for="room-select">Navigate to:</label>
+      <label for="room-select">Select Room:</label>
       <select id="room-select">
-        <option value="">Select a room</option>
+        <option value="">-- Select Room --</option>
+        <!-- Room options will be added here -->
       </select>
     </div>
-    <div id="floormap">
-      <canvas id="floormap-canvas" width="150" height="150"></canvas>
-    </div>
-    <div id="ar-view"></div>
+  </header>
+  <div id="ar-view"></div>
+  
+  <script type="module">
+    import {WebXRButton} from './js/util/webxr-button.js';
+    import {Scene} from './js/render/scenes/scene.js';
+    import {Renderer, createWebGLContext} from './js/render/core/renderer.js';
+    import {InlineViewerHelper} from './js/util/inline-viewer-helper.js';
+    import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
 
-    <script type="module">
-      let xrButton = null;
-      let xrImmersiveRefSpace = null;
-      let gl = null;
-      let renderer = null;
-      let floorMapImage = 'media/floormap.png'; // Path to the floor map image
-      let userPosition = { x: 0, y: 0 }; // Starting position of the user
+    // Initialize variables
+    let xrButton = null;
+    let xrImmersiveRefSpace = null;
+    let inlineViewerHelper = null;
+    let gl = null;
+    let renderer = null;
+    let scene = new Scene();
 
-      const roomCoordinates = {
-        "10,10": { x: 10, y: 10, name: 'Room 101' },
-        "50,50": { x: 50, y: 50, name: 'Room 102' },
-        // Add more rooms as needed
-      };
-
-      const roomSelect = document.getElementById('room-select');
-      Object.keys(roomCoordinates).forEach(key => {
-        const room = roomCoordinates[key];
-        const option = document.createElement('option');
-        option.value = key;
-        option.textContent = room.name;
-        roomSelect.appendChild(option);
+    // Initialize WebXR
+    function initXR() {
+      xrButton = new WebXRButton({
+        onRequestSession: onRequestSession,
+        onEndSession: onEndSession,
+        textEnterXRTitle: "START AR",
+        textXRNotFoundTitle: "AR NOT FOUND",
+        textExitXRTitle: "EXIT AR",
       });
-
-      let path = [];
-
-      function initXR() {
-        xrButton = new WebXRButton({
-          onRequestSession: onRequestSession,
-          onEndSession: onEndSession,
-          textEnterXRTitle: "START AR",
-          textXRNotFoundTitle: "AR NOT FOUND",
-          textExitXRTitle: "EXIT AR",
+      document.querySelector('header').appendChild(xrButton.domElement);
+      if (navigator.xr) {
+        navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+          xrButton.enabled = supported;
         });
-        document.body.appendChild(xrButton.domElement);
-        if (navigator.xr) {
-          navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-            xrButton.enabled = supported;
+        navigator.xr.requestSession('inline').then(onSessionStarted);
+      }
+    }
+
+    function onRequestSession() {
+      return navigator.xr.requestSession('immersive-ar')
+        .then((session) => {
+          xrButton.setSession(session);
+          session.isImmersive = true;
+          onSessionStarted(session);
+        });
+    }
+
+    function initGL() {
+      if (gl) return;
+      gl = createWebGLContext({ xrCompatible: true });
+      document.getElementById('ar-view').appendChild(gl.canvas);
+      function onResize() {
+        gl.canvas.width = gl.canvas.clientWidth * window.devicePixelRatio;
+        gl.canvas.height = gl.canvas.clientHeight * window.devicePixelRatio;
+      }
+      window.addEventListener('resize', onResize);
+      onResize();
+      renderer = new Renderer(gl);
+      scene.setRenderer(renderer);
+    }
+
+    function onSessionStarted(session) {
+      session.addEventListener('end', onSessionEnded);
+      initGL();
+      session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
+      let refSpaceType = session.isImmersive ? 'local' : 'viewer';
+      session.requestReferenceSpace(refSpaceType).then((refSpace) => {
+        if (session.isImmersive) {
+          xrImmersiveRefSpace = refSpace;
+          xrImmersiveRefSpace.addEventListener('reset', (evt) => {
+            if (evt.transform) {
+              xrImmersiveRefSpace = xrImmersiveRefSpace.getOffsetReferenceSpace(evt.transform);
+            }
           });
-          navigator.xr.requestSession('inline').then(onSessionStarted);
+        } else {
+          inlineViewerHelper = new InlineViewerHelper(gl.canvas, refSpace);
         }
-      }
+        session.requestAnimationFrame(onXRFrame);
+      });
+    }
 
-      function onRequestSession() {
-        return navigator.xr.requestSession('immersive-ar')
-            .then((session) => {
-              xrButton.setSession(session);
-              session.isImmersive = true;
-              onSessionStarted(session);
-            });
-      }
+    function onEndSession(session) {
+      session.end();
+    }
 
-      function initGL() {
-        if (gl) return;
-        gl = document.createElement('canvas').getContext('webgl', { xrCompatible: true });
-        document.getElementById('ar-view').appendChild(gl.canvas);
-        gl.canvas.width = window.innerWidth;
-        gl.canvas.height = window.innerHeight;
-
-        window.addEventListener('resize', () => {
-          gl.canvas.width = window.innerWidth;
-          gl.canvas.height = window.innerHeight;
-        });
-
-        renderer = new Renderer(gl);
-      }
-
-      function loadFloorMap(url) {
-        return new Promise((resolve, reject) => {
-          const image = new Image();
-          image.onload = () => {
-            const floormapCanvas = document.getElementById('floormap-canvas');
-            const ctx = floormapCanvas.getContext('2d');
-            ctx.drawImage(image, 0, 0, floormapCanvas.width, floormapCanvas.height);
-            resolve(image);
-          };
-          image.onerror = reject;
-          image.src = url;
-        });
-      }
-
-      function onSessionStarted(session) {
-        session.addEventListener('end', onSessionEnded);
-        initGL();
-        loadFloorMap(floorMapImage).then(() => {
-          session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
-          session.requestReferenceSpace('local').then((refSpace) => {
-            xrImmersiveRefSpace = refSpace;
-            session.requestAnimationFrame(onXRFrame);
-          });
-        });
-      }
-
-      function onEndSession(session) {
-        session.end();
-      }
-
-      function onSessionEnded(event) {
+    function onSessionEnded(event) {
+      if (event.session.isImmersive) {
         xrButton.setSession(null);
       }
+    }
 
-      function onXRFrame(t, frame) {
-        let session = frame.session;
-        let refSpace = xrImmersiveRefSpace;
-        let pose = frame.getViewerPose(refSpace);
-        session.requestAnimationFrame(onXRFrame);
+    function onXRFrame(t, frame) {
+      let session = frame.session;
+      let refSpace = session.isImmersive ? xrImmersiveRefSpace : inlineViewerHelper.referenceSpace;
+      let pose = frame.getViewerPose(refSpace);
+      scene.startFrame();
+      session.requestAnimationFrame(onXRFrame);
+      scene.drawXRFrame(frame, pose);
+      scene.endFrame();
+    }
 
-        if (pose) {
-          const glLayer = session.renderState.baseLayer;
-          gl.bindFramebuffer(gl.FRAMEBUFFER, glLayer.framebuffer);
-          gl.clearColor(0.0, 0.0, 0.0, 0.0); // Clear to transparent
-          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-          // Render the floor map
-          renderFloorMap();
-
-          // Render the navigation grid and user position
-          renderUserPosition();
-          renderPath();
-        }
-      }
-
-      function renderFloorMap() {
-        const floormapCanvas = document.getElementById('floormap-canvas');
-        const ctx = floormapCanvas.getContext('2d');
-        ctx.clearRect(0, 0, floormapCanvas.width, floormapCanvas.height);
-        loadFloorMap(floorMapImage);
-      }
-
-      function renderUserPosition() {
-        const floormapCanvas = document.getElementById('floormap-canvas');
-        const ctx = floormapCanvas.getContext('2d');
-        ctx.fillStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(userPosition.x, userPosition.y, 5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      function renderPath() {
-        if (!path || path.length === 0) return;
-
-        const floormapCanvas = document.getElementById('floormap-canvas');
-        const ctx = floormapCanvas.getContext('2d');
-        ctx.strokeStyle = 'blue';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) {
-          ctx.lineTo(path[i].x, path[i].y);
-        }
-        ctx.stroke();
-
-        // Draw arrows
-        path.forEach((point, index) => {
-          if (index < path.length - 1) {
-            drawArrow(ctx, point, path[index + 1]);
-          }
-        });
-      }
-
-      function drawArrow(ctx, from, to) {
-        const headLength = 10; // Length of the arrow head in pixels
-        const dx = to.x - from.x;
-        const dy = to.y - from.y;
-        const angle = Math.atan2(dy, dx);
-
-        ctx.save();
-        ctx.translate(to.x, to.y);
-        ctx.rotate(angle);
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(-headLength, headLength / 2);
-        ctx.moveTo(0, 0);
-        ctx.lineTo(-headLength, -headLength / 2);
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      function calculatePath(from, to) {
-        const openSet = [];
-        const closedSet = [];
-        const startNode = createNode(from);
-        const endNode = createNode(to);
-        openSet.push(startNode);
-
-        while (openSet.length > 0) {
-          let currentNode = openSet.reduce((prev, curr) => (prev.f < curr.f ? prev : curr));
-
-          if (currentNode.x === endNode.x && currentNode.y === endNode.y) {
-            return reconstructPath(currentNode);
-          }
-
-          openSet.splice(openSet.indexOf(currentNode), 1);
-          closedSet.push(currentNode);
-
-          getNeighbors(currentNode).forEach(neighbor => {
-            if (closedSet.find(node => node.x === neighbor.x && node.y === neighbor.y)) return;
-            
-            const tentativeG = currentNode.g + distance(currentNode, neighbor);
-            let neighborInOpenSet = openSet.find(node => node.x === neighbor.x && node.y === neighbor.y);
-
-            if (!neighborInOpenSet) {
-              neighborInOpenSet = neighbor;
-              openSet.push(neighborInOpenSet);
-            } else if (tentativeG >= neighborInOpenSet.g) {
-              return;
-            }
-
-            neighborInOpenSet.g = tentativeG;
-            neighborInOpenSet.h = distance(neighborInOpenSet, endNode);
-            neighborInOpenSet.f = neighborInOpenSet.g + neighborInOpenSet.h;
-            neighborInOpenSet.parent = currentNode;
-          });
-        }
-
-        return [];
-      }
-
-      function createNode(position) {
-        return {
-          x: position.x,
-          y: position.y,
-          g: 0,
-          h: 0,
-          f: 0,
-          parent: null
-        };
-      }
-
-      function getNeighbors(node) {
-        const neighbors = [];
-        const directions = [
-          { x: 1, y: 0 }, { x: -1, y: 0 },
-          { x: 0, y: 1 }, { x: 0, y: -1 },
-          { x: 1, y: 1 }, { x: -1, y: -1 },
-          { x: 1, y: -1 }, { x: -1, y: 1 }
-        ];
-
-        directions.forEach(direction => {
-          neighbors.push(createNode({
-            x: node.x + direction.x,
-            y: node.y + direction.y
-          }));
-        });
-
-        return neighbors;
-      }
-
-      function distance(nodeA, nodeB) {
-        return Math.sqrt((nodeA.x - nodeB.x) ** 2 + (nodeA.y - nodeB.y) ** 2);
-      }
-
-      function reconstructPath(node) {
-        const path = [];
-        let currentNode = node;
-        while (currentNode != null) {
-          path.unshift(currentNode);
-          currentNode = currentNode.parent;
-        }
-        return path;
-      }
-
-      function onRoomSelect(event) {
-        const selectedRoom = event.target.value;
-        if (selectedRoom) {
-          const targetPosition = roomCoordinates[selectedRoom];
-          path = calculatePath(userPosition, targetPosition);
-        }
-      }
-
-      document.getElementById('room-select').addEventListener('change', onRoomSelect);
-
-      initXR();
-    </script>
-  </body>
+    initXR();
+  </script>
+</body>
 </html>
