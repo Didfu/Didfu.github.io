@@ -21,12 +21,34 @@
       </a-marker>
 
       <!-- 3D Arrow pointing north -->
-      <a-entity id="north-arrow" position="0 1 0" rotation="0 0 0">
-        <a-cone position="0 1 0" radius-bottom="0.1" height="0.5" color="blue"></a-cone>
-        <a-cylinder position="0 0.5 0" radius="0.05" height="1" color="blue"></a-cylinder>
-      </a-entity>
+      <a-marker type="barcode" value="1">
+        <a-entity id="north-arrow" position="0 1 0" rotation="0 0 0">
+          <a-cone position="0 1 0" radius-bottom="0.1" height="0.5" color="blue"></a-cone>
+          <a-cylinder position="0 0.5 0" radius="0.05" height="1" color="blue"></a-cylinder>
+        </a-entity>
+      </a-marker>
 
-      <a-entity camera position="0 0 0"></a-entity>
+      <!-- Camera and square -->
+      <a-entity camera>
+        <a-plane position="0 0 -3" width="0.5" height="0.5" color="blue"></a-plane>
+        <!-- Dropdown Menu -->
+        <a-entity id="dropdown-menu" position="0 -0.5 -2" rotation="0 0 0">
+          <a-plane width="1" height="0.2" color="#333" text="value: Select Option; color: #FFF;"></a-plane>
+          <a-plane position="0 -0.3 0" width="1" height="0.2" color="#555" text="value: Option 1; color: #FFF;" visible="false"></a-plane>
+          <a-plane position="0 -0.6 0" width="1" height="0.2" color="#555" text="value: Option 2; color: #FFF;" visible="false"></a-plane>
+          <a-plane position="0 -0.9 0" width="1" height="0.2" color="#555" text="value: Option 3; color: #FFF;" visible="false"></a-plane>
+        </a-entity>
+      </a-entity>
     </a-scene>
+
+    <script>
+      // JavaScript to handle dropdown visibility
+      document.querySelector('#dropdown-menu').addEventListener('click', function () {
+        const options = this.querySelectorAll('a-plane:not(:first-child)');
+        options.forEach(option => {
+          option.setAttribute('visible', !option.getAttribute('visible'));
+        });
+      });
+    </script>
   </body>
 </html>
