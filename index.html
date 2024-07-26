@@ -6,20 +6,26 @@
   <title>AR Navigation with 3D Arrow</title>
   <style>
     body { margin: 0; }
-    #ar-view { width: 100vw; height: 100vh; }
-    #start-ar-button { position: absolute; top: 20px; left: 20px; padding: 10px 20px; background: #000; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+    #ar-view { width: 100vw; height: 100vh; position: relative; }
+    #start-ar-button { position: absolute; top: 20px; left: 20px; padding: 10px 20px; background: #000; color: #fff; border: none; border-radius: 5px; cursor: pointer; z-index: 10; }
+    #overlay { position: absolute; top: 20px; left: 20px; z-index: 10; }
   </style>
 </head>
 <body>
   <button id="start-ar-button">Start AR</button>
   <div id="ar-view"></div>
+  <div id="overlay">
+    <select id="room-select">
+      <option value="18.9576799,72.8097855">Target Room</option>
+      <!-- Add more rooms as needed -->
+    </select>
+  </div>
 
   <!-- Include Three.js -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
 
   <script>
     let xrButton, gl, renderer, scene, camera, arrow;
-    // Target coordinates (latitude, longitude) to be converted into 3D space coordinates
     const targetLat = 18.9576799;
     const targetLon = 72.8097855;
     const targetPosition = new THREE.Vector3(targetLat / 100, targetLon / 100, -5); // Example conversion
@@ -28,6 +34,7 @@
       xrButton = document.getElementById('start-ar-button');
       xrButton.addEventListener('click', async () => {
         xrButton.style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
         initGL();
         if (navigator.xr) {
           const session = await navigator.xr.requestSession('immersive-ar');
@@ -52,7 +59,12 @@
       const geometry = new THREE.ConeGeometry(0.1, 0.5, 32);
       const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
       arrow = new THREE.Mesh(geometry, material);
+      arrow.position.set(0, 0, -5); // Start position of the arrow
       scene.add(arrow);
+
+      // Create a simple light
+      const light = new THREE.AmbientLight(0xffffff); // Ambient light
+      scene.add(light);
     }
 
     async function onSessionStarted(session) {
@@ -63,6 +75,7 @@
 
       session.addEventListener('end', () => {
         xrButton.style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
       });
     }
 
@@ -82,7 +95,6 @@
         const userLat = position.coords.latitude;
         const userLon = position.coords.longitude;
 
-        // Convert geolocation to 3D space coordinates
         const userPosition = new THREE.Vector3(userLat / 100, userLon / 100, 0); // Example conversion
 
         // Calculate direction vector
