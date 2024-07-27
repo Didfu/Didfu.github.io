@@ -22,6 +22,18 @@
       #dropdown-menu div:hover {
         background: rgba(85, 85, 85, 0.8);
       }
+      #map-container {
+        position: absolute;
+        bottom: 80px;
+        left: 10px;
+        background: rgba(51, 51, 51, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+      }
+      #map {
+        width: 100px;
+        height: 100px;
+      }
       #coordinates {
         position: absolute;
         bottom: 10px;
@@ -39,16 +51,18 @@
       <div class="room-option" style="display: none;">Room 1</div>
       <div class="room-option" style="display: none;">Room 2</div>
     </div>
+    <div id="map-container">
+      <img id="map" src="https://drive.google.com/uc?export=view&id=1RwRyc-_tGpwDSw4_DMB4njD0zUTFfBX2" alt="Map">
+    </div>
     <div id="coordinates">Loading coordinates...</div>
 
     <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' shadow="type: pcfsoft">
-      <a-entity position="0 1 -3">
-        <a-box rotation="45 45 45" width="0.5" height="0.5" depth="0.5" color="blue" shadow="cast: true" id="color-changing-box">
-          <a-animation attribute="rotation" to="45 405 45" dur="3000" repeat="indefinite"></a-animation>
-        </a-box>
-      </a-entity>
+      <!-- Cube at the starting coordinates -->
+      <a-box position="0 0.5 0" rotation="45 45 45" width="0.5" height="0.5" depth="0.5" color="blue" shadow="cast: true" id="color-changing-box">
+        <a-animation attribute="rotation" to="45 405 45" dur="3000" repeat="indefinite"></a-animation>
+      </a-box>
 
-      <a-entity camera look-controls></a-entity>
+      <a-entity camera look-controls position="0 1.6 0"></a-entity>
 
       <a-light type="directional" position="0 10 0" intensity="0.5" castShadow="true"></a-light>
       <a-light type="ambient" intensity="0.5"></a-light>
@@ -86,6 +100,15 @@
         navigator.geolocation.watchPosition(position => {
           const { latitude, longitude } = position.coords;
           document.getElementById('coordinates').textContent = `Lat: ${latitude}, Lng: ${longitude}`;
+          
+          // Map the real-world coordinates to AR scene coordinates
+          const targetLatitude = 19.4432259;
+          const targetLongitude = 72.7997969;
+          const latDiff = latitude - targetLatitude;
+          const lngDiff = longitude - targetLongitude;
+          
+          const box = document.getElementById('color-changing-box');
+          box.setAttribute('position', `${latDiff * 1000} 0.5 ${lngDiff * 1000}`);
         }, error => {
           document.getElementById('coordinates').textContent = 'Unable to retrieve coordinates';
         }, {
