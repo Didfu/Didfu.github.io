@@ -8,12 +8,31 @@
     <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@1.2.0/dist/aframe-physics-system.min.js"></script>
   </head>
   <body style="margin: 0; overflow: hidden;">
-    <a-scene xrweb>
-      <!-- Fixed box in the scene -->
-      <a-box id="fixed-box" position="0 0.5 -3" depth="0.5" height="0.5" width="0.5" color="blue" shadow="cast: true"></a-box>
-      
-      <!-- Camera with look-controls -->
-      <a-entity camera look-controls></a-entity>
+    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' shadow="type: pcfsoft">
+      <!-- Marker for starting point -->
+      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="start-marker">
+        <a-box position="0 0.5 0" material="color: green;"></a-box>
+        <a-text value="Start" position="0 1 0"></a-text>
+      </a-marker>
+
+      <!-- Marker for destination point -->
+      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-kanji.patt" id="end-marker">
+        <a-box position="0 0.5 0" material="color: red;"></a-box>
+        <a-text value="End" position="0 1 0"></a-text>
+      </a-marker>
+
+      <!-- 3D Arrow pointing north -->
+      <a-marker type="barcode" value="1">
+        <a-entity id="north-arrow" position="0 1 0" rotation="0 0 0">
+          <a-cone position="0 1 0" radius-bottom="0.1" height="0.5" color="blue"></a-cone>
+          <a-cylinder position="0 0.5 0" radius="0.05" height="1" color="blue"></a-cylinder>
+        </a-entity>
+      </a-marker>
+
+      <!-- Camera with raycaster -->
+      <a-entity camera look-controls>
+        <a-entity raycaster="objects: .clickable" cursor="fuse: false; rayOrigin: mouse;"></a-entity>
+      </a-entity>
 
       <!-- Light for casting shadow -->
       <a-light type="directional" position="0 10 0" intensity="0.5" castShadow="true"></a-light>
@@ -21,25 +40,25 @@
     </a-scene>
 
     <script>
+      // JavaScript to handle dropdown visibility
+      document.querySelector('#select-room').addEventListener('click', function () {
+        document.querySelectorAll('.room-option').forEach(option => {
+          option.style.display = option.style.display === 'none' ? 'block' : 'none';
+        });
+      });
+
       // JavaScript to handle tap events on the scene
       document.querySelector('a-scene').addEventListener('click', function (evt) {
         const touchPoint = evt.detail.intersection.point;
-        const newBox = document.createElement('a-box');
-        newBox.setAttribute('position', `${touchPoint.x} ${touchPoint.y} ${touchPoint.z}`);
-        newBox.setAttribute('depth', '0.5');
-        newBox.setAttribute('height', '0.5');
-        newBox.setAttribute('width', '0.5');
-        newBox.setAttribute('color', 'blue');
-        newBox.setAttribute('shadow', 'cast: true');
-        this.appendChild(newBox);
+        const newArrow = document.createElement('a-entity');
+        newArrow.setAttribute('position', `${touchPoint.x} ${touchPoint.y} ${touchPoint.z}`);
+        newArrow.setAttribute('rotation', '0 0 0');
+        newArrow.innerHTML = `
+          <a-cone position="0 1 0" radius-bottom="0.1" height="0.5" color="blue"></a-cone>
+          <a-cylinder position="0 0.5 0" radius="0.05" height="1" color="blue"></a-cylinder>
+        `;
+        this.appendChild(newArrow);
       });
-
-      // WebXR initialization
-      if (navigator.xr) {
-        navigator.xr.requestSession('immersive-ar').then(session => {
-          document.querySelector('a-scene').xrSession = session;
-        });
-      }
     </script>
   </body>
 </html>
