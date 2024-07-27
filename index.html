@@ -88,6 +88,10 @@
           document.getElementById('coordinates').textContent = `Lat: ${latitude}, Lng: ${longitude}`;
         }, error => {
           document.getElementById('coordinates').textContent = 'Unable to retrieve coordinates';
+        }, {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 5000
         });
       } else {
         document.getElementById('coordinates').textContent = 'Geolocation is not supported by this browser';
