@@ -1,125 +1,107 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>WebXR Navigation App</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AR Navigation</title>
     <style>
-      #dropdown-menu {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        background: rgba(51, 51, 51, 0.8);
-        padding: 10px;
-        border-radius: 5px;
-      }
-      #dropdown-menu div {
-        padding: 5px;
-        color: white;
-        cursor: pointer;
-      }
-      #dropdown-menu div:hover {
-        background: rgba(85, 85, 85, 0.8);
-      }
-      #map-container {
-        position: absolute;
-        bottom: 80px;
-        left: 10px;
-        background: rgba(51, 51, 51, 0.8);
-        padding: 10px;
-        border-radius: 5px;
-      }
-      #map {
-        width: 100px;
-        height: 100px;
-      }
-      #coordinates {
-        position: absolute;
-        bottom: 10px;
-        left: 10px;
-        background: rgba(51, 51, 51, 0.8);
-        padding: 10px;
-        border-radius: 5px;
-        color: white;
-      }
+        body { margin: 0; }
+        canvas { display: block; }
     </style>
-  </head>
-  <body style="margin: 0; overflow: hidden;">
-    <div id="dropdown-menu">
-      <div id="select-room">Select Room</div>
-      <div class="room-option" style="display: none;" data-lat="19.443000" data-lng="72.800000">Room 1</div>
-      <div class="room-option" style="display: none;" data-lat="19.442500" data-lng="72.800500">Room 2</div>
-    </div>
-    <div id="map-container">
-      <img id="map" src="https://drive.google.com/uc?export=view&id=1RwRyc-_tGpwDSw4_DMB4njD0zUTFfBX2" alt="Map">
-    </div>
-    <div id="coordinates">Loading coordinates...</div>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@immersive-web/webxr@1.0.0/dist/webxr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ar-js-org/ar.js@3.3.2/aframe/build/aframe-ar.js"></script>
+    <script type="module">
+        import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
+        import { ARButton } from 'https://cdn.jsdelivr.net/npm/three/examples/jsm/webxr/ARButton.js';
 
-    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' shadow="type: pcfsoft">
-      <!-- Arrow pointing towards the target -->
-      <a-entity id="navigation-arrow" geometry="primitive: cone; height: 1; radiusBottom: 0.25; radiusTop: 0.1" material="color: red" position="0 0.5 -2" rotation="0 0 90">
-        <a-animation attribute="rotation" to="0 360 0" dur="1000" repeat="indefinite"></a-animation>
-      </a-entity>
+        let camera, scene, renderer;
+        let arrow;
 
-      <a-entity camera look-controls position="0 1.6 0"></a-entity>
+        const destinationLat = 18.9576799;
+        const destinationLng = 72.8097855;
+        let destination = new THREE.Vector3();
 
-      <a-light type="directional" position="0 10 0" intensity="0.5" castShadow="true"></a-light>
-      <a-light type="ambient" intensity="0.5"></a-light>
-    </a-scene>
+        navigator.geolocation.getCurrentPosition(setDestination, showError);
 
-    <script>
-      document.getElementById('select-room').addEventListener('click', function() {
-        const roomOptions = document.querySelectorAll('.room-option');
-        roomOptions.forEach(option => {
-          option.style.display = option.style.display === 'none' ? 'block' : 'none';
-        });
-      });
-
-      document.querySelectorAll('.room-option').forEach(option => {
-        option.addEventListener('click', function() {
-          const targetLat = parseFloat(this.getAttribute('data-lat'));
-          const targetLng = parseFloat(this.getAttribute('data-lng'));
-          navigateTo(targetLat, targetLng);
-          alert(`Navigating to ${this.textContent}`);
-        });
-      });
-
-      let currentLat = null;
-      let currentLng = null;
-
-      function navigateTo(targetLat, targetLng) {
-        if (currentLat !== null && currentLng !== null) {
-          const latDiff = targetLat - currentLat;
-          const lngDiff = targetLng - currentLng;
-
-          // Scale factors (adjust according to your map dimensions)
-          const latScale = 5000;
-          const lngScale = 5000;
-          
-          const x = latDiff * latScale;
-          const z = lngDiff * lngScale;
-          
-          const arrow = document.getElementById('navigation-arrow');
-          arrow.setAttribute('position', `${x} 0.5 ${z}`);
+        function setDestination(position) {
+            const { latitude, longitude } = position.coords;
+            destination = latLngToVector3(destinationLat, destinationLng, latitude, longitude);
         }
-      }
 
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(position => {
-          currentLat = position.coords.latitude;
-          currentLng = position.coords.longitude;
-          document.getElementById('coordinates').textContent = `Lat: ${currentLat}, Lng: ${currentLng}`;
-        }, error => {
-          document.getElementById('coordinates').textContent = 'Unable to retrieve coordinates';
-        }, {
-          enableHighAccuracy: true,
-          maximumAge: 0,
-          timeout: 5000
-        });
-      } else {
-        document.getElementById('coordinates').textContent = 'Geolocation is not supported by this browser';
-      }
+        function showError(error) {
+            console.error('Geolocation error:', error);
+        }
+
+        function latLngToVector3(latDest, lngDest, latOrigin, lngOrigin) {
+            const earthRadius = 6371; // Earth's radius in kilometers
+
+            const latDiff = THREE.MathUtils.degToRad(latDest - latOrigin);
+            const lngDiff = THREE.MathUtils.degToRad(lngDest - lngOrigin);
+
+            const a = Math.sin(latDiff / 2) * Math.sin(latDiff / 2) +
+                      Math.cos(THREE.MathUtils.degToRad(latOrigin)) * Math.cos(THREE.MathUtils.degToRad(latDest)) *
+                      Math.sin(lngDiff / 2) * Math.sin(lngDiff / 2);
+
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            const distance = earthRadius * c; // Distance in kilometers
+
+            const x = distance * Math.cos(lngDiff);
+            const y = 0;
+            const z = distance * Math.sin(lngDiff);
+
+            return new THREE.Vector3(x, y, z);
+        }
+
+        init();
+        animate();
+
+        function init() {
+            // Set up the scene
+            scene = new THREE.Scene();
+
+            // Set up the camera
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+
+            // Set up the renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.xr.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            // Add AR button
+            document.body.appendChild(ARButton.createButton(renderer));
+
+            // Set up lighting
+            const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+            light.position.set(0.5, 1, 0.25);
+            scene.add(light);
+
+            // Create the arrow
+            const geometry = new THREE.ConeGeometry(0.1, 0.2, 32);
+            const material = new THREE.MeshNormalMaterial();
+            arrow = new THREE.Mesh(geometry, material);
+            arrow.position.set(0, 0, -1); // Initially placed 1 meter in front of the camera
+            scene.add(arrow);
+        }
+
+        function animate() {
+            renderer.setAnimationLoop(render);
+        }
+
+        function render() {
+            // Update the arrow direction
+            if (camera && arrow && destination) {
+                const direction = new THREE.Vector3();
+                direction.subVectors(destination, camera.position).normalize();
+                arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), direction);
+            }
+
+            renderer.render(scene, camera);
+        }
     </script>
-  </body>
+</body>
 </html>
