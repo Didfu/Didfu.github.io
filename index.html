@@ -59,6 +59,14 @@
         `;
         this.appendChild(newArrow);
       });
+
+if (navigator.xr) {
+navigator.xr.requestSession( immersive-ar').then(session => {
+document.querySelector('a-scene').
+xrSession = session;
+});
+}
+
     </script>
   </body>
 </html>
