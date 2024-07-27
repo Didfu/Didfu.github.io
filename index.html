@@ -5,23 +5,32 @@
     <title>AR Navigation</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar-nft.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
 </head>
-<body style="margin: 0; overflow: hidden;">
+<body>
+    <div id="hud">
+        <label for="room-select">Select Room:</label>
+        <select id="room-select">
+            <option value="18.9576799,72.8097855">Room 1</option>
+            <option value="18.9586799,72.8097855">Room 2</option>
+            <option value="18.9596799,72.8097855">Room 3</option>
+        </select>
+    </div>
+
     <a-scene embedded arjs='sourceType: webcam;'>
-        <a-camera position="0 0 0" look-controls>
-            <!-- HUD Menu -->
-            <a-entity id="hud" position="0 -0.5 -2">
-                <a-plane color="#FFFFFF" width="1.5" height="0.5" position="0 0 0" opacity="0.8"></a-plane>
-                <a-text value="Select Room:" position="-0.6 0.1 0" color="#000000"></a-text>
-                <a-entity id="room-select-entity" position="0 0 0">
-                    <a-plane color="#FFFFFF" width="1" height="0.2" position="0 -0.1 0" opacity="1">
-                        <a-text id="room-select-text" value="Room 1" position="-0.4 0 0" color="#000000"></a-text>
-                    </a-plane>
-                </a-entity>
-            </a-entity>
-        </a-camera>
+        <a-camera position="0 0 0" look-controls></a-camera>
         <!-- Arrow -->
-        <a-cone id="arrow" radius-bottom="0.05" height="0.2" color="red" position="0 0 -1" rotation="90 0 0"></a-cone>
+        <a-cone id="arrow" radius-bottom="0.05" height="0.2" color="red" position="0 0 -5" rotation="90 0 0"></a-cone>
     </a-scene>
 
     <script>
@@ -65,14 +74,9 @@
             return new THREE.Vector3(x, y, z);
         }
 
-        document.querySelector('#room-select-entity').addEventListener('click', () => {
-            const currentText = document.querySelector('#room-select-text').getAttribute('value');
-            let currentIndex = rooms.findIndex(room => room.name === currentText);
-            currentIndex = (currentIndex + 1) % rooms.length;
-            const nextRoom = rooms[currentIndex];
-
-            document.querySelector('#room-select-text').setAttribute('value', nextRoom.name);
-            updateDestination(nextRoom.lat, nextRoom.lng);
+        document.getElementById('room-select').addEventListener('change', (event) => {
+            const [lat, lng] = event.target.value.split(',').map(Number);
+            updateDestination(lat, lng);
         });
 
         AFRAME.registerComponent('arrow-behavior', {
@@ -81,8 +85,8 @@
                 const arrow = document.querySelector('#arrow');
 
                 if (camera && arrow && destination) {
-                    // Ensure the arrow is always in front of the camera
-                    arrow.object3D.position.set(0, -0.5, -1).applyMatrix4(camera.object3D.matrixWorld);
+                    // Ensure the arrow is always at a little distance in front of the camera
+                    arrow.object3D.position.set(0, 0, -5).applyMatrix4(camera.object3D.matrixWorld);
 
                     // Calculate the direction to the destination
                     const direction = new THREE.Vector3();
