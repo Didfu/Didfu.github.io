@@ -32,8 +32,8 @@
     </div>
 
     <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' shadow="type: pcfsoft">
-      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="cube-marker">
-        <a-box position="0 0.5 0" rotation="45 45 45" width="1" height="1" depth="1" color="blue" shadow="cast: true;">
+      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="hiro-marker">
+        <a-box position="0 1 0" rotation="45 45 45" width="1" height="1" depth="1" color="blue" shadow="cast: true;">
           <a-animation attribute="rotation" to="45 405 45" dur="3000" repeat="indefinite"></a-animation>
         </a-box>
       </a-marker>
@@ -43,5 +43,20 @@
       <a-light type="directional" position="0 10 0" intensity="0.5" castShadow="true"></a-light>
       <a-light type="ambient" intensity="0.5"></a-light>
     </a-scene>
+
+    <script>
+      document.getElementById('select-room').addEventListener('click', function() {
+        const roomOptions = document.querySelectorAll('.room-option');
+        roomOptions.forEach(option => {
+          option.style.display = option.style.display === 'none' ? 'block' : 'none';
+        });
+      });
+
+      document.querySelectorAll('.room-option').forEach(option => {
+        option.addEventListener('click', function() {
+          alert(`You selected ${this.textContent}`);
+        });
+      });
+    </script>
   </body>
 </html>
