@@ -3,30 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <title>AR Navigation</title>
-    <style>
-        body { margin: 0; }
-        canvas { display: block; }
-    </style>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar-nft.js"></script>
 </head>
-<body>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@immersive-web/webxr@1.0.0/dist/webxr.js"></script>
-    <script type="module">
-        import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
-        import { ARButton } from 'https://cdn.jsdelivr.net/npm/three/examples/jsm/webxr/ARButton.js';
+<body style="margin: 0; overflow: hidden;">
+    <a-scene embedded arjs='sourceType: webcam;'>
+        <a-camera position="0 0 0" look-controls>
+            <!-- HUD Menu -->
+            <a-entity id="hud" position="0 -0.5 -2">
+                <a-plane color="#FFFFFF" width="1.5" height="0.5" position="0 0 0" opacity="0.8"></a-plane>
+                <a-text value="Select Room:" position="-0.6 0.1 0" color="#000000"></a-text>
+                <a-entity id="room-select-entity" position="0 0 0">
+                    <a-plane color="#FFFFFF" width="1" height="0.2" position="0 -0.1 0" opacity="1">
+                        <a-text id="room-select-text" value="Room 1" position="-0.4 0 0" color="#000000"></a-text>
+                    </a-plane>
+                </a-entity>
+            </a-entity>
+        </a-camera>
+        <!-- Arrow -->
+        <a-cone id="arrow" radius-bottom="0.05" height="0.2" color="red" position="0 0 -1" rotation="90 0 0"></a-cone>
+    </a-scene>
 
-        let camera, scene, renderer;
-        let arrow;
+    <script>
+        const rooms = [
+            { name: 'Room 1', lat: 18.9576799, lng: 72.8097855 },
+            { name: 'Room 2', lat: 18.9586799, lng: 72.8097855 },
+            { name: 'Room 3', lat: 18.9596799, lng: 72.8097855 }
+        ];
 
-        const destinationLat = 18.9576799;
-        const destinationLng = 72.8097855;
         let destination = new THREE.Vector3();
 
-        navigator.geolocation.getCurrentPosition(setDestination, showError);
-
-        function setDestination(position) {
-            const { latitude, longitude } = position.coords;
-            destination = latLngToVector3(destinationLat, destinationLng, latitude, longitude);
+        function updateDestination(lat, lng) {
+            navigator.geolocation.getCurrentPosition(position => {
+                const { latitude, longitude } = position.coords;
+                destination = latLngToVector3(lat, lng, latitude, longitude);
+            }, showError);
         }
 
         function showError(error) {
@@ -54,59 +65,37 @@
             return new THREE.Vector3(x, y, z);
         }
 
-        init();
-        animate();
+        document.querySelector('#room-select-entity').addEventListener('click', () => {
+            const currentText = document.querySelector('#room-select-text').getAttribute('value');
+            let currentIndex = rooms.findIndex(room => room.name === currentText);
+            currentIndex = (currentIndex + 1) % rooms.length;
+            const nextRoom = rooms[currentIndex];
 
-        function init() {
-            // Set up the scene
-            scene = new THREE.Scene();
+            document.querySelector('#room-select-text').setAttribute('value', nextRoom.name);
+            updateDestination(nextRoom.lat, nextRoom.lng);
+        });
 
-            // Set up the camera
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+        AFRAME.registerComponent('arrow-behavior', {
+            tick: function () {
+                const camera = document.querySelector('[camera]');
+                const arrow = document.querySelector('#arrow');
 
-            // Set up the renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.xr.enabled = true;
-            document.body.appendChild(renderer.domElement);
+                if (camera && arrow && destination) {
+                    // Ensure the arrow is always in front of the camera
+                    arrow.object3D.position.set(0, -0.5, -1).applyMatrix4(camera.object3D.matrixWorld);
 
-            // Add AR button
-            document.body.appendChild(ARButton.createButton(renderer));
+                    // Calculate the direction to the destination
+                    const direction = new THREE.Vector3();
+                    direction.subVectors(destination, camera.object3D.position).normalize();
+                    const arrowDirection = new THREE.Vector3(0, 0, -1);
+                    const rotationQuaternion = new THREE.Quaternion().setFromUnitVectors(arrowDirection, direction);
 
-            // Set up lighting
-            const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-            light.position.set(0.5, 1, 0.25);
-            scene.add(light);
-
-            // Create the arrow
-            const geometry = new THREE.ConeGeometry(0.1, 0.2, 32);
-            const material = new THREE.MeshNormalMaterial();
-            arrow = new THREE.Mesh(geometry, material);
-            arrow.position.set(0, 0, -1); // Initially placed 1 meter in front of the camera
-            scene.add(arrow);
-        }
-
-        function animate() {
-            renderer.setAnimationLoop(render);
-        }
-
-        function render() {
-            // Ensure the arrow is always in front of the camera
-            if (camera && arrow) {
-                arrow.position.set(0, 0, -1).applyMatrix4(camera.matrixWorld);
-
-                // Calculate the direction to the destination
-                const direction = new THREE.Vector3();
-                direction.subVectors(destination, camera.position).normalize();
-                const arrowDirection = new THREE.Vector3(0, 0, -1);
-                const rotationQuaternion = new THREE.Quaternion().setFromUnitVectors(arrowDirection, direction);
-
-                arrow.setRotationFromQuaternion(rotationQuaternion);
+                    arrow.object3D.setRotationFromQuaternion(rotationQuaternion);
+                }
             }
+        });
 
-            renderer.render(scene, camera);
-        }
+        document.querySelector('#arrow').setAttribute('arrow-behavior', '');
     </script>
 </body>
 </html>
