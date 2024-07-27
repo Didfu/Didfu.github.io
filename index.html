@@ -11,7 +11,6 @@
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@immersive-web/webxr@1.0.0/dist/webxr.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@ar-js-org/ar.js@3.3.2/aframe/build/aframe-ar.js"></script>
     <script type="module">
         import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
         import { ARButton } from 'https://cdn.jsdelivr.net/npm/three/examples/jsm/webxr/ARButton.js';
@@ -93,11 +92,17 @@
         }
 
         function render() {
-            // Update the arrow direction
-            if (camera && arrow && destination) {
+            // Ensure the arrow is always in front of the camera
+            if (camera && arrow) {
+                arrow.position.set(0, 0, -1).applyMatrix4(camera.matrixWorld);
+
+                // Calculate the direction to the destination
                 const direction = new THREE.Vector3();
                 direction.subVectors(destination, camera.position).normalize();
-                arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), direction);
+                const arrowDirection = new THREE.Vector3(0, 0, -1);
+                const rotationQuaternion = new THREE.Quaternion().setFromUnitVectors(arrowDirection, direction);
+
+                arrow.setRotationFromQuaternion(rotationQuaternion);
             }
 
             renderer.render(scene, camera);
