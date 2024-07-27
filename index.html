@@ -33,7 +33,7 @@
 
     <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' shadow="type: pcfsoft">
       <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="hiro-marker">
-        <a-box position="0 1 0" rotation="45 45 45" width="1" height="1" depth="1" color="blue" shadow="cast: true">
+        <a-box position="0 0.5 0" rotation="45 45 45" width="1" height="1" depth="1" color="blue" shadow="cast: true" id="color-changing-box">
           <a-animation attribute="rotation" to="45 405 45" dur="3000" repeat="indefinite"></a-animation>
         </a-box>
       </a-marker>
@@ -57,6 +57,20 @@
           alert(`You selected ${this.textContent}`);
         });
       });
+
+      function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+          color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+      }
+
+      setInterval(() => {
+        const box = document.getElementById('color-changing-box');
+        box.setAttribute('color', getRandomColor());
+      }, 1000); // Change color every second
     </script>
   </body>
 </html>
