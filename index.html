@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@1.2.0/dist/aframe-master.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@1.2.0/dist/aframe-physics-system.min.js"></script>
     <style>
       #dropdown-menu {
         position: absolute;
@@ -34,48 +32,53 @@
     </div>
 
     <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' shadow="type: pcfsoft">
-      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="start-marker">
+      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="hiro-marker">
         <a-box position="0 0.5 0" material="color: green;"></a-box>
-        <a-text value="Start" position="0 1 0"></a-text>
+        <a-text value="Hiro" position="0 1 0"></a-text>
       </a-marker>
 
-      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-kanji.patt" id="end-marker">
+      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-kanji.patt" id="kanji-marker">
         <a-box position="0 0.5 0" material="color: red;"></a-box>
-        <a-text value="End" position="0 1 0"></a-text>
+        <a-text value="Kanji" position="0 1 0"></a-text>
       </a-marker>
 
-      <a-marker type="barcode" value="1">
-        <a-entity id="north-arrow" position="0 1 0" rotation="0 0 0">
-          <a-cone position="0 1 0" radius-bottom="0.1" height="0.5" color="blue"></a-cone>
-          <a-cylinder position="0 0.5 0" radius="0.05" height="1" color="blue"></a-cylinder>
-        </a-entity>
-      </a-marker>
-
-      <a-entity camera look-controls>
-        <a-entity raycaster="objects: .clickable" cursor="fuse: false; rayOrigin: mouse;"></a-entity>
+      <a-entity id="north-arrow" position="0 1 0" rotation="0 0 0">
+        <a-cone position="0 1 0" radius-bottom="0.1" height="0.5" color="blue"></a-cone>
+        <a-cylinder position="0 0.5 0" radius="0.05" height="1" color="blue"></a-cylinder>
       </a-entity>
+
+      <a-entity camera look-controls></a-entity>
 
       <a-light type="directional" position="0 10 0" intensity="0.5" castShadow="true"></a-light>
       <a-light type="ambient" intensity="0.5"></a-light>
     </a-scene>
 
     <script>
-      document.querySelector('#select-room').addEventListener('click', function () {
-        document.querySelectorAll('.room-option').forEach(option => {
-          option.style.display = option.style.display === 'none' ? 'block' : 'none';
-        });
+      AFRAME.registerComponent('markerhandler', {
+        init: function () {
+          const hiroMarker = document.querySelector("#hiro-marker");
+          const kanjiMarker = document.querySelector("#kanji-marker");
+          const arrow = document.querySelector("#north-arrow");
+
+          this.el.sceneEl.addEventListener('markerFound', (event) => {
+            if (hiroMarker.object3D.visible && kanjiMarker.object3D.visible) {
+              const hiroPos = new THREE.Vector3();
+              const kanjiPos = new THREE.Vector3();
+              hiroMarker.object3D.getWorldPosition(hiroPos);
+              kanjiMarker.object3D.getWorldPosition(kanjiPos);
+
+              const direction = new THREE.Vector3().subVectors(kanjiPos, hiroPos).normalize();
+              const distance = hiroPos.distanceTo(kanjiPos);
+
+              arrow.setAttribute('position', hiroPos.lerp(kanjiPos, 0.5));
+              arrow.object3D.lookAt(kanjiPos);
+            }
+          });
+        }
       });
 
-      document.querySelector('a-scene').addEventListener('click', function (evt) {
-        const touchPoint = evt.detail.intersection.point;
-        const newArrow = document.createElement('a-entity');
-        newArrow.setAttribute('position', `${touchPoint.x} ${touchPoint.y} ${touchPoint.z}`);
-        newArrow.setAttribute('rotation', '0 0 0');
-        newArrow.innerHTML = `
-          <a-cone position="0 1 0" radius-bottom="0.1" height="0.5" color="blue"></a-cone>
-          <a-cylinder position="0 0.5 0" radius="0.05" height="1" color="blue"></a-cylinder>
-        `;
-        this.appendChild(newArrow);
+      document.querySelector('a-scene').addEventListener('loaded', () => {
+        document.querySelector('a-scene').setAttribute('markerhandler', '');
       });
     </script>
   </body>
