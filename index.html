@@ -32,10 +32,10 @@
     </div>
 
     <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' shadow="type: pcfsoft">
-      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="square-marker">
-        <a-plane position="0 0.5 0" rotation="45 0 0" width="1" height="1" color="blue" shadow="cast: true;">
-          <a-animation attribute="rotation" to="0 360 0" dur="3000" repeat="indefinite"></a-animation>
-        </a-plane>
+      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="cube-marker">
+        <a-box position="0 0.5 0" rotation="0 45 45" material="color: blue;" shadow="cast: true;">
+          <a-animation attribute="rotation" to="0 405 405" dur="3000" repeat="indefinite"></a-animation>
+        </a-box>
       </a-marker>
 
       <a-entity camera look-controls></a-entity>
