@@ -48,8 +48,8 @@
   <body style="margin: 0; overflow: hidden;">
     <div id="dropdown-menu">
       <div id="select-room">Select Room</div>
-      <div class="room-option" style="display: none;">Room 1</div>
-      <div class="room-option" style="display: none;">Room 2</div>
+      <div class="room-option" style="display: none;" data-lat="19.443000" data-lng="72.800000">Room 1</div>
+      <div class="room-option" style="display: none;" data-lat="19.442500" data-lng="72.800500">Room 2</div>
     </div>
     <div id="map-container">
       <img id="map" src="https://drive.google.com/uc?export=view&id=1RwRyc-_tGpwDSw4_DMB4njD0zUTFfBX2" alt="Map">
@@ -57,10 +57,10 @@
     <div id="coordinates">Loading coordinates...</div>
 
     <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' shadow="type: pcfsoft">
-      <!-- Cube at the starting coordinates -->
-      <a-box position="0 0.5 0" rotation="45 45 45" width="0.5" height="0.5" depth="0.5" color="blue" shadow="cast: true" id="color-changing-box">
-        <a-animation attribute="rotation" to="45 405 45" dur="3000" repeat="indefinite"></a-animation>
-      </a-box>
+      <!-- Arrow pointing towards the target -->
+      <a-entity id="navigation-arrow" geometry="primitive: cone; height: 1; radiusBottom: 0.25; radiusTop: 0.1" material="color: red" position="0 0.5 -2" rotation="0 0 90">
+        <a-animation attribute="rotation" to="0 360 0" dur="1000" repeat="indefinite"></a-animation>
+      </a-entity>
 
       <a-entity camera look-controls position="0 1.6 0"></a-entity>
 
@@ -78,37 +78,38 @@
 
       document.querySelectorAll('.room-option').forEach(option => {
         option.addEventListener('click', function() {
-          alert(`You selected ${this.textContent}`);
+          const targetLat = parseFloat(this.getAttribute('data-lat'));
+          const targetLng = parseFloat(this.getAttribute('data-lng'));
+          navigateTo(targetLat, targetLng);
+          alert(`Navigating to ${this.textContent}`);
         });
       });
 
-      function getRandomColor() {
-        const letters = '0123456789ABCDEF';
-        let color = '#';
-        for (let i = 0; i < 6; i++) {
-          color += letters[Math.floor(Math.random() * 16)];
-        }
-        return color;
-      }
+      let currentLat = null;
+      let currentLng = null;
 
-      setInterval(() => {
-        const box = document.getElementById('color-changing-box');
-        box.setAttribute('color', getRandomColor());
-      }, 1000); // Change color every second
+      function navigateTo(targetLat, targetLng) {
+        if (currentLat !== null && currentLng !== null) {
+          const latDiff = targetLat - currentLat;
+          const lngDiff = targetLng - currentLng;
+
+          // Scale factors (adjust according to your map dimensions)
+          const latScale = 5000;
+          const lngScale = 5000;
+          
+          const x = latDiff * latScale;
+          const z = lngDiff * lngScale;
+          
+          const arrow = document.getElementById('navigation-arrow');
+          arrow.setAttribute('position', `${x} 0.5 ${z}`);
+        }
+      }
 
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(position => {
-          const { latitude, longitude } = position.coords;
-          document.getElementById('coordinates').textContent = `Lat: ${latitude}, Lng: ${longitude}`;
-          
-          // Map the real-world coordinates to AR scene coordinates
-          const targetLatitude = 19.4432259;
-          const targetLongitude = 72.7997969;
-          const latDiff = latitude - targetLatitude;
-          const lngDiff = longitude - targetLongitude;
-          
-          const box = document.getElementById('color-changing-box');
-          box.setAttribute('position', `${latDiff * 1000} 0.5 ${lngDiff * 1000}`);
+          currentLat = position.coords.latitude;
+          currentLng = position.coords.longitude;
+          document.getElementById('coordinates').textContent = `Lat: ${currentLat}, Lng: ${currentLng}`;
         }, error => {
           document.getElementById('coordinates').textContent = 'Unable to retrieve coordinates';
         }, {
