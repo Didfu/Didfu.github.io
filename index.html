@@ -26,17 +26,15 @@
   </head>
   <body style="margin: 0; overflow: hidden;">
     <div id="dropdown-menu">
-      <div id="select-room">Select pls Room</div>
+      <div id="select-room">Select Room</div>
       <div class="room-option" style="display: none;">Room 1</div>
       <div class="room-option" style="display: none;">Room 2</div>
     </div>
 
     <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' shadow="type: pcfsoft">
-      <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt" id="hiro-marker">
-        <a-box position="0 1 0" rotation="45 45 45" width="1" height="1" depth="1" color="blue" shadow="cast: true" id="color-changing-box">
-          <a-animation attribute="rotation" to="45 405 45" dur="3000" repeat="indefinite"></a-animation>
-        </a-box>
-      </a-marker>
+      <a-box position="0 1 0" rotation="45 45 45" width="1" height="1" depth="1" color="blue" shadow="cast: true" id="color-changing-box">
+        <a-animation attribute="rotation" to="45 405 45" dur="3000" repeat="indefinite"></a-animation>
+      </a-box>
 
       <a-entity camera look-controls></a-entity>
 
