@@ -14,6 +14,7 @@
             background: rgba(255, 255, 255, 0.8);
             padding: 10px;
             border-radius: 5px;
+            z-index: 10; /* Ensure the HUD is on top */
         }
     </style>
 </head>
@@ -105,8 +106,6 @@
         });
 
         document.querySelector('#arrow').setAttribute('arrow-behavior', '');
- this.camera = new THREE.PerspectiveCamera();
-    this.camera.matrixAutoUpdate = false
     </script>
 </body>
 </html>
