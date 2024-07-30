@@ -89,35 +89,23 @@
                 const arrow = document.querySelector('#arrow');
 
                 if (camera && arrow && destination) {
-                    // Ensure the arrow is always at a little distance in front of the camera
                     const cameraWorldPosition = new THREE.Vector3();
                     camera.object3D.getWorldPosition(cameraWorldPosition);
 
+                    // Calculate direction vector from camera to destination
                     const direction = new THREE.Vector3();
                     direction.subVectors(destination, cameraWorldPosition).normalize();
+                    
+                    // Rotate arrow to point to the destination
+                    arrow.object3D.lookAt(destination);
 
-                    const arrowDirection = new THREE.Vector3(0, 0, -1);
-                    const rotationQuaternion = new THREE.Quaternion().setFromUnitVectors(arrowDirection, direction);
-
-                    arrow.object3D.position.set(0, 0, -5).applyMatrix4(camera.object3D.matrixWorld);
-                    arrow.object3D.setRotationFromQuaternion(rotationQuaternion);
+                    // Ensure the arrow is always at a little distance in front of the camera
+                    arrow.object3D.position.copy(cameraWorldPosition).add(direction.multiplyScalar(5));
                 }
             }
         });
 
         document.querySelector('#arrow').setAttribute('arrow-behavior', '');
-
-        // Check for AR.js Errors
-        window.addEventListener('error', function(event) {
-            console.error('Error occurred:', event.error);
-        });
-
-        // Add camera permission error handling
-        navigator.permissions.query({ name: 'camera' }).then(function(permissionStatus) {
-            if (permissionStatus.state !== 'granted') {
-                alert('Camera permission is required for this application to work.');
-            }
-        });
     </script>
 </body>
 </html>
