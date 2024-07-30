@@ -106,6 +106,18 @@
         });
 
         document.querySelector('#arrow').setAttribute('arrow-behavior', '');
+
+        // Check for AR.js Errors
+        window.addEventListener('error', function(event) {
+            console.error('Error occurred:', event.error);
+        });
+
+        // Add camera permission error handling
+        navigator.permissions.query({ name: 'camera' }).then(function(permissionStatus) {
+            if (permissionStatus.state !== 'granted') {
+                alert('Camera permission is required for this application to work.');
+            }
+        });
     </script>
 </body>
 </html>
