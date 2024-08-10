@@ -30,10 +30,8 @@
 
     <a-scene embedded arjs='sourceType: webcam;'>
         <a-camera position="0 0 0" look-controls></a-camera>
-        <!-- Arrow -->
-        <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 0 -5" rotation="0 0 0"></a-cone>
+        <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 0 -5" rotation="0 -90 0"></a-cone>
         
-        <!-- Background Plane for HUD -->
         <a-plane position="0 1.6 -2" width="1.5" height="0.4" color="#FFFFFF" opacity="0.8"></a-plane>
     </a-scene>
 
@@ -89,8 +87,8 @@
                     const direction = new THREE.Vector3();
                     direction.subVectors(destination, cameraWorldPosition).normalize();
 
-                    const arrowDirection = new THREE.Vector3(0, 0, -1);
-                    arrow.object3D.lookAt(destination); // Adjust arrow to look towards the destination
+                    arrow.object3D.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+
                     arrow.object3D.position.set(0, 0, -5).applyMatrix4(camera.object3D.matrixWorld);
                 }
             }
