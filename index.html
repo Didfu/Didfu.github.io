@@ -38,12 +38,6 @@
     </a-scene>
 
     <script>
-        const rooms = [
-            { name: 'Room 1', lat: 18.9576799, lng: 72.8097855 },
-            { name: 'Room 2', lat: 18.9586799, lng: 72.8097855 },
-            { name: 'Room 3', lat: 18.9596799, lng: 72.8097855 }
-        ];
-
         let destination = new THREE.Vector3();
 
         function updateDestination(lat, lng) {
@@ -89,7 +83,6 @@
                 const arrow = document.querySelector('#arrow');
 
                 if (camera && arrow && destination) {
-                    // Ensure the arrow is always at a little distance in front of the camera
                     const cameraWorldPosition = new THREE.Vector3();
                     camera.object3D.getWorldPosition(cameraWorldPosition);
 
@@ -97,10 +90,8 @@
                     direction.subVectors(destination, cameraWorldPosition).normalize();
 
                     const arrowDirection = new THREE.Vector3(0, 0, -1);
-                    const rotationQuaternion = new THREE.Quaternion().setFromUnitVectors(arrowDirection, direction);
-
+                    arrow.object3D.lookAt(destination); // Adjust arrow to look towards the destination
                     arrow.object3D.position.set(0, 0, -5).applyMatrix4(camera.object3D.matrixWorld);
-                    arrow.object3D.setRotationFromQuaternion(rotationQuaternion);
                 }
             }
         });
