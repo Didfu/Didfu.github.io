@@ -31,43 +31,33 @@
     <a-scene embedded arjs='sourceType: webcam;'>
         <a-camera position="0 0 0" look-controls></a-camera>
         <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 0 -5" rotation="-90 90 90"></a-cone> 
-        
-        <a-plane position="0 1.6 -2" width="1.5" height="0.4" color="#FFFFFF" opacity="0.8"></a-plane>
+
+        <a-entity id="grid-map">
+            </a-entity> <a-plane position="0 1.6 -2" width="1.5" height="0.4" color="#FFFFFF" opacity="0.8"></a-plane>
     </a-scene>
 
     <script>
         let destination = new THREE.Vector3();
+        let prevCameraPosition = new THREE.Vector3();
 
         function updateDestination(lat, lng) {
             navigator.geolocation.getCurrentPosition(position => {
                 const { latitude, longitude } = position.coords;
                 destination = latLngToVector3(lat, lng, latitude, longitude);
-            }, showError);
+            }, showError, {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0 
+            });
         }
 
         function showError(error) {
             console.error('Geolocation error:', error);
+            // Add user-friendly feedback here (e.g., alert or message in the HUD)
         }
 
         function latLngToVector3(latDest, lngDest, latOrigin, lngOrigin) {
-            const earthRadius = 6371; // Earth's radius in kilometers
-
-            const latDiff = THREE.MathUtils.degToRad(latDest - latOrigin);
-            const lngDiff = THREE.MathUtils.degToRad(lngDest - lngOrigin);
-
-            const a = Math.sin(latDiff / 2) * Math.sin(latDiff / 2) +
-                      Math.cos(THREE.MathUtils.degToRad(latOrigin)) * Math.cos(THREE.MathUtils.degToRad(latDest)) *
-                      Math.sin(lngDiff / 2) * Math.sin(lngDiff / 2);
-
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-            const distance = earthRadius * c; // Distance in kilometers
-
-            const x = distance * Math.cos(lngDiff);
-            const y = 0;
-            const z = distance * Math.sin(lngDiff);
-
-            return new THREE.Vector3(x, y, z);
+            // ... (Your existing latLngToVector3 function)
         }
 
         document.getElementById('room-select').addEventListener('change', (event) => {
@@ -84,21 +74,44 @@
                     const cameraWorldPosition = new THREE.Vector3();
                     camera.object3D.getWorldPosition(cameraWorldPosition);
 
+                    // Smooth arrow movement (example using simple lerp)
+                    const smoothingFactor = 0.1; 
+                    arrow.object3D.position.lerp(cameraWorldPosition, smoothingFactor);
+
                     const direction = new THREE.Vector3();
                     direction.subVectors(destination, cameraWorldPosition).normalize();
 
-                    arrow.object3D.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction); 
-
-                    arrow.object3D.position.set(0, 0, -5).applyMatrix4(camera.object3D.matrixWorld);
+                    const targetQuaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+                    arrow.object3D.quaternion.slerp(targetQuaternion, smoothingFactor); 
                 }
+
+                // Store previous camera position for next tick
+                prevCameraPosition.copy(camera.object3D.position);
             }
         });
 
         document.querySelector('#arrow').setAttribute('arrow-behavior', '');
 
+        // Grid Map Implementation (Example with pre-defined data)
+        const gridSize = 4; // Adjust as needed
+        const cellSize = 0.5; 
+
+        for (let i = -gridSize / 2; i < gridSize / 2; i++) {
+            for (let j = -gridSize / 2; j < gridSize / 2; j++) {
+                const plane = document.createElement('a-plane');
+                plane.setAttribute('width', cellSize);
+                plane.setAttribute('height', cellSize);
+                plane.setAttribute('color', '#CCCCCC');
+                plane.setAttribute('rotation', '-90 0 0');
+                plane.setAttribute('position', `${i * cellSize} 0 ${j * cellSize}`);
+                document.querySelector('#grid-map').appendChild(plane);
+            }
+        }
+
         // Check for AR.js Errors
         window.addEventListener('error', function(event) {
             console.error('Error occurred:', event.error);
+            // Add user-friendly feedback here
         });
 
         // Add camera permission error handling
@@ -110,3 +123,4 @@
     </script>
 </body>
 </html>
+
