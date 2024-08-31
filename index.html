@@ -30,7 +30,7 @@
 
     <a-scene embedded arjs='sourceType: webcam;'>
         <a-camera position="0 0 0" look-controls></a-camera>
-        <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 -0.5 -2"></a-cone> 
+        <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 0 -2"></a-cone> 
 
         <a-entity id="grid-map"></a-entity> 
 
@@ -53,7 +53,7 @@
 
         function showError(error) {
             console.error('Geolocation error:', error);
-            // TODO: Add user-friendly feedback here (e.g., alert or message in the HUD)
+            alert('Error getting your location. Please ensure location services are enabled and try again.');
         }
 
         function latLngToVector3(latDest, lngDest, latOrigin, lngOrigin) {
@@ -88,16 +88,15 @@
                 const arrow = document.querySelector('#arrow');
 
                 if (camera && arrow && destination) {
-                    const cameraWorldPosition = new THREE.Vector3();
-                    camera.object3D.getWorldPosition(cameraWorldPosition);
+                    const cameraRotation = new THREE.Euler();
+                    camera.object3D.getWorldRotation(cameraRotation);
 
-                    const direction = new THREE.Vector3();
-                    direction.subVectors(destination, cameraWorldPosition).normalize();
+                    const direction = destination.clone();
+                    direction.applyEuler(cameraRotation); 
 
                     let angle = Math.atan2(direction.x, direction.z);
                     angle = THREE.MathUtils.radToDeg(angle); 
 
-                    // Apply rotation around the y-axis
                     arrow.setAttribute('rotation', `0 ${angle} 0`);
                 }
             }
@@ -124,7 +123,7 @@
         // Check for AR.js Errors
         window.addEventListener('error', function(event) {
             console.error('Error occurred:', event.error);
-            // TODO: Add user-friendly feedback here
+            alert('An error occurred. Please check the console for details.');
         });
 
         // Add camera permission error handling
