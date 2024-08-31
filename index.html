@@ -30,7 +30,7 @@
 
     <a-scene embedded arjs='sourceType: webcam;'>
         <a-camera position="0 0 0" look-controls></a-camera>
-        <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 0 -2"></a-cone> 
+        <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 0 -2" rotation="-90 0 0"></a-cone> 
 
         <a-entity id="grid-map"></a-entity> 
 
@@ -97,7 +97,7 @@
                     let angle = Math.atan2(direction.x, direction.z);
                     angle = THREE.MathUtils.radToDeg(angle); 
 
-                    arrow.setAttribute('rotation', `0 ${angle} 0`);
+                    arrow.setAttribute('rotation', `-90 ${angle} 0`);
                 }
             }
         });
