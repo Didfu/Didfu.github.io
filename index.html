@@ -30,7 +30,7 @@
 
     <a-scene embedded arjs='sourceType: webcam;'>
         <a-camera position="0 0 0" look-controls></a-camera>
-        <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 0 -2" rotation="-90 0 0"></a-cone> 
+        <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 -1 -2" rotation="-90 0 0"></a-cone> 
 
         <a-entity id="grid-map"></a-entity> 
 
@@ -83,24 +83,35 @@
         });
 
         AFRAME.registerComponent('navigation-helper', {
-            tick: function () {
-                const camera = document.querySelector('[camera]');
-                const arrow = document.querySelector('#arrow');
+    tick: function () {
+        const camera = document.querySelector('[camera]');
+        const arrow = document.querySelector('#arrow');
 
-                if (camera && arrow && destination) {
-                    const cameraRotation = new THREE.Euler();
-                    camera.object3D.getWorldRotation(cameraRotation);
+        if (camera && arrow && destination) {
+            const cameraWorldPosition = new THREE.Vector3();
+            camera.object3D.getWorldPosition(cameraWorldPosition);
 
-                    const direction = destination.clone();
-                    direction.applyEuler(cameraRotation); 
+            const direction = destination.clone().sub(cameraWorldPosition).normalize();
 
-                    let angle = Math.atan2(direction.x, direction.z);
-                    angle = THREE.MathUtils.radToDeg(angle); 
+            let angle = Math.atan2(direction.x, direction.z);
+            angle = THREE.MathUtils.radToDeg(angle);
 
-                    arrow.setAttribute('rotation', `-90 ${angle} 0`);
-                }
-            }
-        });
+            arrow.setAttribute('rotation', `0 ${angle} 0`);
+        }
+
+        // Check if the user has arrived (moved outside the previous if)
+        const distanceToDestination = camera.object3D.position.distanceTo(destination);
+        if (distanceToDestination < 0.5) { // Adjust the threshold as needed
+            // Create 3D tick mark
+            arrow.setAttribute('primitive', 'a-entity');
+            arrow.innerHTML = `
+                <a-cylinder position="0 0 0" radius="0.02" height="0.2" color="green" rotation="45 0 0"></a-cylinder>
+                <a-cylinder position="0.1 0.1 0" radius="0.02" height="0.25" color="green" rotation="-45 0 0"></a-cylinder>
+            `;
+        }
+    }
+});
+
 
         document.querySelector('a-scene').setAttribute('navigation-helper', '');
 
@@ -135,4 +146,3 @@
     </script>
 </body>
 </html>
-
