@@ -14,7 +14,7 @@
             background: rgba(255, 255, 255, 0.8);
             padding: 10px;
             border-radius: 5px;
-            z-index: 10; 
+            z-index: 10; /* Ensure the HUD is on top */
         }
     </style>
 </head>
@@ -22,38 +22,39 @@
     <div id="hud">
         <label for="room-select">Select Room:</label>
         <select id="room-select">
-            <option value="19.2681461, 72.9675232">301</option>
-            <option value="18.9586799,72.8097855">chowpatty temple</option>
-            <option value="19.2682832, 72.9677273">304c</option>
+            <option value="18.9576799,72.8097855">Room 1</option>
+            <option value="18.9586799,72.8097855">Room 2</option>
+            <option value="18.9596799,72.8097855">Room 3</option>
         </select>
     </div>
 
     <a-scene embedded arjs='sourceType: webcam;'>
         <a-camera position="0 0 0" look-controls></a-camera>
-        <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 -1 -2" rotation="-90 0 0"></a-cone> 
-
-        <a-entity id="grid-map"></a-entity> 
-
+        <!-- Arrow -->
+        <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 0 -5" rotation="0 0 0"></a-cone>
+        
+        <!-- Background Plane for HUD -->
         <a-plane position="0 1.6 -2" width="1.5" height="0.4" color="#FFFFFF" opacity="0.8"></a-plane>
     </a-scene>
 
     <script>
+        const rooms = [
+            { name: 'Room 1', lat: 18.9576799, lng: 72.8097855 },
+            { name: 'Room 2', lat: 18.9586799, lng: 72.8097855 },
+            { name: 'Room 3', lat: 18.9596799, lng: 72.8097855 }
+        ];
+
         let destination = new THREE.Vector3();
 
         function updateDestination(lat, lng) {
             navigator.geolocation.getCurrentPosition(position => {
                 const { latitude, longitude } = position.coords;
                 destination = latLngToVector3(lat, lng, latitude, longitude);
-            }, showError, {
-                enableHighAccuracy: true,
-                timeout: 5000,
-                maximumAge: 0 
-            });
+            }, showError);
         }
 
         function showError(error) {
             console.error('Geolocation error:', error);
-            alert('Error getting your location. Please ensure location services are enabled and try again.');
         }
 
         function latLngToVector3(latDest, lngDest, latOrigin, lngOrigin) {
@@ -68,7 +69,7 @@
 
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-            const distance = earthRadius * c; 
+            const distance = earthRadius * c; // Distance in kilometers
 
             const x = distance * Math.cos(lngDiff);
             const y = 0;
@@ -82,59 +83,33 @@
             updateDestination(lat, lng);
         });
 
-        AFRAME.registerComponent('navigation-helper', {
-    tick: function () {
-        const camera = document.querySelector('[camera]');
-        const arrow = document.querySelector('#arrow');
+        AFRAME.registerComponent('arrow-behavior', {
+            tick: function () {
+                const camera = document.querySelector('[camera]');
+                const arrow = document.querySelector('#arrow');
 
-        if (camera && arrow && destination) {
-            const cameraWorldPosition = new THREE.Vector3();
-            camera.object3D.getWorldPosition(cameraWorldPosition);
+                if (camera && arrow && destination) {
+                    // Ensure the arrow is always at a little distance in front of the camera
+                    const cameraWorldPosition = new THREE.Vector3();
+                    camera.object3D.getWorldPosition(cameraWorldPosition);
 
-            const direction = destination.clone().sub(cameraWorldPosition).normalize();
+                    const direction = new THREE.Vector3();
+                    direction.subVectors(destination, cameraWorldPosition).normalize();
 
-            let angle = Math.atan2(direction.x, direction.z);
-            angle = THREE.MathUtils.radToDeg(angle);
+                    const arrowDirection = new THREE.Vector3(0, 0, -1);
+                    const rotationQuaternion = new THREE.Quaternion().setFromUnitVectors(arrowDirection, direction);
 
-            arrow.setAttribute('rotation', `0 ${angle} 0`);
-        }
-
-        // Check if the user has arrived (moved outside the previous if)
-        const distanceToDestination = camera.object3D.position.distanceTo(destination);
-        if (distanceToDestination < 0.5) { // Adjust the threshold as needed
-            // Create 3D tick mark
-            arrow.setAttribute('primitive', 'a-entity');
-            arrow.innerHTML = `
-                <a-cylinder position="0 0 0" radius="0.02" height="0.2" color="green" rotation="45 0 0"></a-cylinder>
-                <a-cylinder position="0.1 0.1 0" radius="0.02" height="0.25" color="green" rotation="-45 0 0"></a-cylinder>
-            `;
-        }
-    }
-});
-
-
-        document.querySelector('a-scene').setAttribute('navigation-helper', '');
-
-        // Grid Map Implementation (Example with pre-defined data)
-        const gridSize = 4; 
-        const cellSize = 0.5; 
-
-        for (let i = -gridSize / 2; i < gridSize / 2; i++) {
-            for (let j = -gridSize / 2; j < gridSize / 2; j++) {
-                const plane = document.createElement('a-plane');
-                plane.setAttribute('width', cellSize);
-                plane.setAttribute('height', cellSize);
-                plane.setAttribute('color', '#CCCCCC');
-                plane.setAttribute('rotation', '-90 0 0');
-                plane.setAttribute('position', `${i * cellSize} 0 ${j * cellSize}`);
-                document.querySelector('#grid-map').appendChild(plane);
+                    arrow.object3D.position.set(0, 0, -5).applyMatrix4(camera.object3D.matrixWorld);
+                    arrow.object3D.setRotationFromQuaternion(rotationQuaternion);
+                }
             }
-        }
+        });
+
+        document.querySelector('#arrow').setAttribute('arrow-behavior', '');
 
         // Check for AR.js Errors
         window.addEventListener('error', function(event) {
             console.error('Error occurred:', event.error);
-            alert('An error occurred. Please check the console for details.');
         });
 
         // Add camera permission error handling
