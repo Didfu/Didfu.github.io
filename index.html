@@ -14,7 +14,7 @@
             background: rgba(255, 255, 255, 0.8);
             padding: 10px;
             border-radius: 5px;
-            z-index: 10; /* Ensure the HUD is on top */
+            z-index: 10;
         }
     </style>
 </head>
@@ -22,101 +22,145 @@
     <div id="hud">
         <label for="room-select">Select Room:</label>
         <select id="room-select">
-            <option value="18.9576799,72.8097855">303</option>
-            <option value="18.9586799,72.8097855">Room 2</option>
-            <option value="18.9596799,72.8097855">Room 3</option>
+            <option value="18.9576799,72.8097855">Room 1</option>
+            <option value="18.9586799,72.8098855">Room 2</option>
+            <option value="18.9596799,72.8099855">Room 3</option>
         </select>
     </div>
 
-    <a-scene embedded arjs='sourceType: webcam;'>
+    <a-scene embedded arjs="sourceType: webcam;">
         <a-camera position="0 0 0" look-controls></a-camera>
-        <!-- Arrow -->
         <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 0 -50" rotation="90 0 0"></a-cone>
-        
-        <!-- Background Plane for HUD -->
-        <a-plane position="0 1.6 -2" width="1.5" height="0.4" color="#FFFFFF" opacity="0.8"></a-plane>
     </a-scene>
-<p>hi</p>
+
     <script>
         const rooms = [
-            { name: '303', lat: 18.9576799, lng: 72.8097855 },
-            { name: 'Room 2', lat: 18.9586799, lng: 72.8097855 },
-            { name: 'Room 3', lat: 18.9596799, lng: 72.8097855 }
+            { name: 'Room 1', lat: 18.9576799, lng: 72.8097855 },
+            { name: 'Room 2', lat: 18.9586799, lng: 72.8098855 },
+            { name: 'Room 3', lat: 18.9596799, lng: 72.8099855 }
         ];
+
+        const latMin = 18.9570, lngMin = 72.8090;  // Min coordinates of your map area
+        const latMax = 18.9600, lngMax = 72.8100;  // Max coordinates of your map area
+        const gridWidth = 10, gridHeight = 10;     // Define the grid size
 
         let destination = new THREE.Vector3();
 
-        function updateDestination(lat, lng) {
+        // Geolocation: Get the user's current position
+        function getCurrentPosition(callback) {
             navigator.geolocation.getCurrentPosition(position => {
-                const { latitude, longitude } = position.coords;
-                destination = latLngToVector3(lat, lng, latitude, longitude);
-            }, showError);
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+                callback(userLat, userLng);
+            }, error => {
+                console.error("Unable to retrieve location:", error);
+            });
         }
 
-        function showError(error) {
-            console.error('Geolocation error:', error);
+        // Convert GPS coordinates to grid position
+        function gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight) {
+            const normalizedLat = (lat - latMin) / (latMax - latMin);
+            const normalizedLng = (lng - lngMin) / (lngMax - lngMin);
+
+            const gridX = Math.floor(normalizedLng * gridWidth);
+            const gridY = Math.floor((1 - normalizedLat) * gridHeight); // Flip Y axis if necessary
+
+            return { gridX, gridY };
         }
 
-        function latLngToVector3(latDest, lngDest, latOrigin, lngOrigin) {
-            const earthRadius = 6371; // Earth's radius in kilometers
-
-            const latDiff = THREE.MathUtils.degToRad(latDest - latOrigin);
-            const lngDiff = THREE.MathUtils.degToRad(lngDest - lngOrigin);
-
-            const a = Math.sin(latDiff / 2) * Math.sin(latDiff / 2) +
-                      Math.cos(THREE.MathUtils.degToRad(latOrigin)) * Math.cos(THREE.MathUtils.degToRad(latDest)) *
-                      Math.sin(lngDiff / 2) * Math.sin(lngDiff / 2);
-
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-            const distance = earthRadius * c; // Distance in kilometers
-
-            const x = distance * Math.cos(lngDiff);
-            const y = 0;
-            const z = distance * Math.sin(lngDiff);
-
-            return new THREE.Vector3(x, y, z);
+        // Function to convert grid position back to AR coordinates (for visualization)
+        function gridToARPosition(gridX, gridY, gridWidth, gridHeight) {
+            const x = (gridX / gridWidth) * 10 - 5; // Scale and center in AR space
+            const z = (gridY / gridHeight) * 10 - 5;
+            return { x, y: 0, z };  // We keep y at 0 for AR visualization
         }
 
-        document.getElementById('room-select').addEventListener('change', (event) => {
-            const [lat, lng] = event.target.value.split(',').map(Number);
-            updateDestination(lat, lng);
-        });
+        // A* pathfinding algorithm (simplified for grid navigation)
+        function aStar(start, goal, grid) {
+            const openSet = [start];
+            const cameFrom = new Map();
+            const gScore = new Map();
+            const fScore = new Map();
 
-        AFRAME.registerComponent('arrow-behavior', {
-            tick: function () {
-                const camera = document.querySelector('[camera]');
-                const arrow = document.querySelector('#arrow');
+            function heuristic(a, b) {
+                return Math.abs(a.gridX - b.gridX) + Math.abs(a.gridY - b.gridY);
+            }
 
-                if (camera && arrow && destination) {
-                    // Ensure the arrow is always at a little distance in front of the camera
-                    const cameraWorldPosition = new THREE.Vector3();
-                    camera.object3D.getWorldPosition(cameraWorldPosition);
+            gScore.set(start, 0);
+            fScore.set(start, heuristic(start, goal));
 
-                    const direction = new THREE.Vector3();
-                    direction.subVectors(destination, cameraWorldPosition).normalize();
+            while (openSet.length > 0) {
+                openSet.sort((a, b) => fScore.get(a) - fScore.get(b));
+                const current = openSet.shift();
 
-                    const arrowDirection = new THREE.Vector3(0, 0, -1);
-                    const rotationQuaternion = new THREE.Quaternion().setFromUnitVectors(arrowDirection, direction);
+                if (current.gridX === goal.gridX && current.gridY === goal.gridY) {
+                    // Reconstruct path
+                    let totalPath = [current];
+                    while (cameFrom.has(current)) {
+                        current = cameFrom.get(current);
+                        totalPath.unshift(current);
+                    }
+                    return totalPath;
+                }
 
-                    arrow.object3D.position.set(0, 0, -5).applyMatrix4(camera.object3D.matrixWorld);
-                    arrow.object3D.setRotationFromQuaternion(rotationQuaternion);
+                // Process neighbors
+                const neighbors = getNeighbors(current, gridWidth, gridHeight);
+                for (let neighbor of neighbors) {
+                    const tentativeGScore = gScore.get(current) + 1; // Distance between nodes is always 1 on a grid
+                    if (!gScore.has(neighbor) || tentativeGScore < gScore.get(neighbor)) {
+                        cameFrom.set(neighbor, current);
+                        gScore.set(neighbor, tentativeGScore);
+                        fScore.set(neighbor, tentativeGScore + heuristic(neighbor, goal));
+                        if (!openSet.includes(neighbor)) openSet.push(neighbor);
+                    }
                 }
             }
-        });
+            return []; // No path found
+        }
 
-        document.querySelector('#arrow').setAttribute('arrow-behavior', '');
+        // Get neighbors in a grid (4 directions)
+        function getNeighbors(node, gridWidth, gridHeight) {
+            const neighbors = [];
+            if (node.gridX > 0) neighbors.push({ gridX: node.gridX - 1, gridY: node.gridY });
+            if (node.gridX < gridWidth - 1) neighbors.push({ gridX: node.gridX + 1, gridY: node.gridY });
+            if (node.gridY > 0) neighbors.push({ gridX: node.gridX, gridY: node.gridY - 1 });
+            if (node.gridY < gridHeight - 1) neighbors.push({ gridX: node.gridX, gridY: node.gridY + 1 });
+            return neighbors;
+        }
 
-        // Check for AR.js Errors
-        window.addEventListener('error', function(event) {
-            console.error('Error occurred:', event.error);
-        });
+        // Visualize the path in AR
+        function visualizePathInAR(path) {
+            const scene = document.querySelector('a-scene');
+            path.forEach(position => {
+                const arPosition = gridToARPosition(position.gridX, position.gridY, gridWidth, gridHeight);
+                const arrow = document.createElement('a-cone');
+                arrow.setAttribute('position', `${arPosition.x} 0 ${arPosition.z}`);
+                arrow.setAttribute('radius-bottom', '0.08');
+                arrow.setAttribute('height', '0.4');
+                arrow.setAttribute('color', 'blue');
+                scene.appendChild(arrow);
+            });
+        }
 
-        // Add camera permission error handling
-        navigator.permissions.query({ name: 'camera' }).then(function(permissionStatus) {
-            if (permissionStatus.state !== 'granted') {
-                alert('Camera permission is required for this application to work.');
-            }
+        // Trigger navigation when room is selected
+        document.getElementById('room-select').addEventListener('change', (event) => {
+            const [lat, lng] = event.target.value.split(',').map(Number);
+
+            // Get selected room's grid position
+            const selectedRoomGridPosition = gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
+            console.log(`Selected Room's grid position: (${selectedRoomGridPosition.gridX}, ${selectedRoomGridPosition.gridY})`);
+
+            // Get user's current position via Geolocation API and initiate navigation
+            getCurrentPosition((userLat, userLng) => {
+                const userGridPosition = gpsToGrid(userLat, userLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
+                console.log(`User's grid position: (${userGridPosition.gridX}, ${userGridPosition.gridY})`);
+
+                // Run A* pathfinding
+                const path = aStar(userGridPosition, selectedRoomGridPosition, gridWidth, gridHeight);
+
+                // Display path in AR
+                visualizePathInAR(path);
+            });
         });
     </script>
 </body>
