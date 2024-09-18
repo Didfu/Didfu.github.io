@@ -16,14 +16,29 @@
             border-radius: 5px;
             z-index: 10;
         }
-        #map {
+        #map-container {
             position: absolute;
             bottom: 10px;
             left: 10px;
             width: 200px; /* Adjust size as needed */
-            height: auto;
+            height: 200px; /* Ensure the container is square */
             border: 2px solid #000; /* Optional: add border */
             z-index: 10;
+            background-color: white; /* Background color for better visibility */
+            overflow: hidden;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Ensure the image covers the container */
+        }
+        #location-dot {
+            position: absolute;
+            width: 10px; /* Size of the dot */
+            height: 10px;
+            background-color: blue;
+            border-radius: 50%; /* Makes the dot round */
+            transform: translate(-50%, -50%); /* Center the dot */
         }
     </style>
 </head>
@@ -37,12 +52,16 @@
         </select>
     </div>
 
-    <img id="map" src="map.jpg" alt="Map" />
+    <div id="map-container">
+        <img id="map" src="map.jpg" alt="Map" />
+        <div id="location-dot"></div>
+    </div>
 
     <a-scene embedded arjs="sourceType: webcam;">
         <a-camera position="0 0 0" look-controls></a-camera>
         <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 0 -50" rotation="90 0 0"></a-cone>
     </a-scene>
+
     <script>
         const rooms = [
             { name: 'Room 1', lat: 18.9576799, lng: 72.8097855 },
@@ -53,8 +72,6 @@
         const latMin = 18.9570, lngMin = 72.8090;  // Min coordinates of your map area
         const latMax = 18.9600, lngMax = 72.8100;  // Max coordinates of your map area
         const gridWidth = 10, gridHeight = 10;     // Define the grid size
-
-        let destination = new THREE.Vector3();
 
         // Geolocation: Get the user's current position
         function getCurrentPosition(callback) {
@@ -78,11 +95,21 @@
             return { gridX, gridY };
         }
 
-        // Function to convert grid position back to AR coordinates (for visualization)
-        function gridToARPosition(gridX, gridY, gridWidth, gridHeight) {
-            const x = (gridX / gridWidth) * 10 - 5; // Scale and center in AR space
-            const z = (gridY / gridHeight) * 10 - 5;
-            return { x, y: 0, z };  // We keep y at 0 for AR visualization
+        // Convert grid position to percentage on map (assuming map is 100x100% of its container)
+        function gridToMapPercentage(gridX, gridY, gridWidth, gridHeight) {
+            const x = (gridX / gridWidth) * 100;
+            const y = (gridY / gridHeight) * 100;
+            return { x, y };
+        }
+
+        // Show the user's current location on the map
+        function showLocationOnMap(lat, lng) {
+            const userGridPosition = gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
+            const { x, y } = gridToMapPercentage(userGridPosition.gridX, userGridPosition.gridY, gridWidth, gridHeight);
+
+            const dot = document.getElementById('location-dot');
+            dot.style.left = `${x}%`;
+            dot.style.top = `${y}%`;
         }
 
         // A* pathfinding algorithm (simplified for grid navigation)
@@ -160,10 +187,13 @@
             const selectedRoomGridPosition = gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
             console.log(`Selected Room's grid position: (${selectedRoomGridPosition.gridX}, ${selectedRoomGridPosition.gridY})`);
 
-            // Get user's current position via Geolocation API and initiate navigation
+            // Get user's current position via Geolocation API and show on map
             getCurrentPosition((userLat, userLng) => {
                 const userGridPosition = gpsToGrid(userLat, userLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
                 console.log(`User's grid position: (${userGridPosition.gridX}, ${userGridPosition.gridY})`);
+
+                // Show the user's location on the map
+                showLocationOnMap(userLat, userLng);
 
                 // Run A* pathfinding
                 const path = aStar(userGridPosition, selectedRoomGridPosition, gridWidth, gridHeight);
