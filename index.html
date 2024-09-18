@@ -60,11 +60,13 @@
     </div>
 
     <a-scene embedded arjs="sourceType: webcam;">
-        <a-camera id="camera" position="0 0 0" look-controls></a-camera>
-        <!-- Arrow is now lower and fixed relative to the camera -->
-        <a-entity id="arrow-entity" position="0 -1 -2" rotation="0 0 0" scale="1 1 1">
+        <a-camera id="camera" position="0 0 0" look-controls>
+<a-entity id="arrow-entity" position="0 -1 -2" rotation="0 0 0" scale="1 1 1">
             <a-cone id="arrow" radius-bottom="0.2" height="0.8" color="red" rotation="90 0 0"></a-cone>
         </a-entity>
+</a-camera>
+        <!-- Arrow is now lower and fixed relative to the camera -->
+        
     </a-scene>
 
     <script>
