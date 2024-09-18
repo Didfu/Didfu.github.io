@@ -23,8 +23,6 @@
             width: 200px; /* Adjust size as needed */
             height: 200px; /* Ensure the container is square */
             border: 2px solid #000; /* Optional: add border */
-            padding: 10px;
-            border-radius: 5px;
             z-index: 10;
             background-color: white; /* Background color for better visibility */
             overflow: hidden;
@@ -60,9 +58,9 @@
     </div>
 
     <a-scene embedded arjs="sourceType: webcam;">
-        <a-camera position="0 0 0" look-controls></a-camera>
+        <a-camera id="camera" position="0 0 0" look-controls></a-camera>
         <!-- Arrow fixed in front of the camera and rotated based on direction -->
-        <a-cone id="arrow" radius-bottom="0.2" height="0.8" color="red" position="0 0 -2" rotation="0 0 0"></a-cone>
+        <a-cone id="arrow" radius-bottom="0.1" height="0.8" color="red" position="0 0 -2" rotation="0 0 0"></a-cone>
     </a-scene>
 
     <script>
@@ -168,6 +166,13 @@
             return neighbors;
         }
 
+        // Convert grid position to AR coordinates (for visualization)
+        function gridToARPosition(gridX, gridY, gridWidth, gridHeight) {
+            const x = (gridX / gridWidth) * 10 - 5; // Scale and center in AR space
+            const z = (gridY / gridHeight) * 10 - 5;
+            return { x, y: 0, z };  // We keep y at 0 for AR visualization
+        }
+
         // Visualize the path in AR
         function visualizePathInAR(path) {
             const scene = document.querySelector('a-scene');
@@ -182,17 +187,15 @@
             });
         }
 
-        // Update arrow rotation to point in direction of travel
+        // Update the arrow's direction based on camera orientation
         function updateArrowDirection() {
-            const arrow = document.getElementById('arrow');
-            const scene = document.querySelector('a-scene');
-            const camera = scene.querySelector('a-camera');
-            const cameraPosition = new THREE.Vector3();
-            camera.object3D.getWorldPosition(cameraPosition);
+            const camera = document.querySelector('#camera');
+            const arrow = document.querySelector('#arrow');
+            const cameraPosition = new THREE.Vector3().setFromMatrixPosition(camera.object3D.matrixWorld);
+            const direction = new THREE.Vector3(0, 0, -1).applyMatrix4(camera.object3D.matrixWorld);
 
-            // Assuming the direction is towards the camera
-            const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.object3D.getWorldQuaternion(new THREE.Quaternion()));
             arrow.object3D.lookAt(cameraPosition.add(direction));
+            arrow.object3D.rotation.x = -Math.PI / 2; // Point the arrow in the correct direction
         }
 
         // Trigger navigation when room is selected
