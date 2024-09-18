@@ -20,25 +20,27 @@
             position: absolute;
             bottom: 10px;
             left: 10px;
-            width: 200px; /* Adjust size as needed */
-            height: 200px; /* Ensure the container is square */
-            border: 2px solid #000; /* Optional: add border */
+            width: 200px;
+            height: 200px;
+            border: 2px solid #000;
+            padding: 10px;
+            border-radius: 5px;
             z-index: 10;
-            background-color: white; /* Background color for better visibility */
+            background-color: white;
             overflow: hidden;
         }
         #map {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Ensure the image covers the container */
+            object-fit: cover;
         }
         #location-dot {
             position: absolute;
-            width: 10px; /* Size of the dot */
+            width: 10px;
             height: 10px;
             background-color: blue;
-            border-radius: 50%; /* Makes the dot round */
-            transform: translate(-50%, -50%); /* Center the dot */
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
         }
     </style>
 </head>
@@ -59,7 +61,7 @@
 
     <a-scene embedded arjs="sourceType: webcam;">
         <a-camera id="camera" position="0 0 0" look-controls></a-camera>
-        <!-- Arrow fixed in front of the camera and rotated based on direction -->
+        <!-- Arrow is now lower and fixed relative to the camera -->
         <a-entity id="arrow-entity" position="0 -1 -2" rotation="0 0 0" scale="1 1 1">
             <a-cone id="arrow" radius-bottom="0.2" height="0.8" color="red" rotation="90 0 0"></a-cone>
         </a-entity>
@@ -93,7 +95,7 @@
             const normalizedLng = (lng - lngMin) / (lngMax - lngMin);
 
             const gridX = Math.floor(normalizedLng * gridWidth);
-            const gridY = Math.floor((1 - normalizedLat) * gridHeight); // Flip Y axis if necessary
+            const gridY = Math.floor((1 - normalizedLat) * gridHeight);
 
             return { gridX, gridY };
         }
@@ -146,7 +148,7 @@
                 // Process neighbors
                 const neighbors = getNeighbors(current, gridWidth, gridHeight);
                 for (let neighbor of neighbors) {
-                    const tentativeGScore = gScore.get(current) + 1; // Distance between nodes is always 1 on a grid
+                    const tentativeGScore = gScore.get(current) + 1;
                     if (!gScore.has(neighbor) || tentativeGScore < gScore.get(neighbor)) {
                         cameFrom.set(neighbor, current);
                         gScore.set(neighbor, tentativeGScore);
@@ -155,7 +157,7 @@
                     }
                 }
             }
-            return []; // No path found
+            return [];
         }
 
         // Get neighbors in a grid (4 directions)
@@ -170,9 +172,9 @@
 
         // Convert grid position to AR coordinates (for visualization)
         function gridToARPosition(gridX, gridY, gridWidth, gridHeight) {
-            const x = (gridX / gridWidth) * 10 - 5; // Scale and center in AR space
+            const x = (gridX / gridWidth) * 10 - 5;
             const z = (gridY / gridHeight) * 10 - 5;
-            return { x, y: 0, z };  // We keep y at 0 for AR visualization
+            return { x, y: 0, z };
         }
 
         // Visualize the path in AR
@@ -192,12 +194,11 @@
         // Update the arrow's direction based on camera orientation
         function updateArrowDirection() {
             const camera = document.querySelector('#camera');
-            const arrow = document.querySelector('#arrow');
-            const cameraPosition = new THREE.Vector3().setFromMatrixPosition(camera.object3D.matrixWorld);
-            const direction = new THREE.Vector3(0, 0, -1).applyMatrix4(camera.object3D.matrixWorld);
+            const arrowEntity = document.querySelector('#arrow-entity');
+            const cameraRotation = camera.getAttribute('rotation');
 
-            arrow.object3D.lookAt(cameraPosition.add(direction));
-            arrow.object3D.rotation.x = -Math.PI / 2; // Point the arrow in the correct direction
+            // Ensure the arrow follows the camera's direction
+            arrowEntity.setAttribute('rotation', `0 ${cameraRotation.y} 0`);
         }
 
         // Trigger navigation when room is selected
