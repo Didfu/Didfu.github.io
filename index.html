@@ -23,6 +23,8 @@
             width: 200px; /* Adjust size as needed */
             height: 200px; /* Ensure the container is square */
             border: 2px solid #000; /* Optional: add border */
+            padding: 10px;
+            border-radius: 5px;
             z-index: 10;
             background-color: white; /* Background color for better visibility */
             overflow: hidden;
@@ -59,7 +61,8 @@
 
     <a-scene embedded arjs="sourceType: webcam;">
         <a-camera position="0 0 0" look-controls></a-camera>
-        <a-cone id="arrow" radius-bottom="0.08" height="0.4" color="red" position="0 0 -50" rotation="90 0 0"></a-cone>
+        <!-- Arrow fixed in front of the camera and rotated based on direction -->
+        <a-cone id="arrow" radius-bottom="0.2" height="0.8" color="red" position="0 0 -2" rotation="0 0 0"></a-cone>
     </a-scene>
 
     <script>
@@ -179,6 +182,19 @@
             });
         }
 
+        // Update arrow rotation to point in direction of travel
+        function updateArrowDirection() {
+            const arrow = document.getElementById('arrow');
+            const scene = document.querySelector('a-scene');
+            const camera = scene.querySelector('a-camera');
+            const cameraPosition = new THREE.Vector3();
+            camera.object3D.getWorldPosition(cameraPosition);
+
+            // Assuming the direction is towards the camera
+            const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.object3D.getWorldQuaternion(new THREE.Quaternion()));
+            arrow.object3D.lookAt(cameraPosition.add(direction));
+        }
+
         // Trigger navigation when room is selected
         document.getElementById('room-select').addEventListener('change', (event) => {
             const [lat, lng] = event.target.value.split(',').map(Number);
@@ -187,13 +203,16 @@
             const selectedRoomGridPosition = gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
             console.log(`Selected Room's grid position: (${selectedRoomGridPosition.gridX}, ${selectedRoomGridPosition.gridY})`);
 
-            // Get user's current position via Geolocation API and show on map
+            // Get user's current position via Geolocation API and initiate navigation
             getCurrentPosition((userLat, userLng) => {
                 const userGridPosition = gpsToGrid(userLat, userLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
                 console.log(`User's grid position: (${userGridPosition.gridX}, ${userGridPosition.gridY})`);
 
                 // Show the user's location on the map
                 showLocationOnMap(userLat, userLng);
+
+                // Update arrow direction
+                updateArrowDirection();
 
                 // Run A* pathfinding
                 const path = aStar(userGridPosition, selectedRoomGridPosition, gridWidth, gridHeight);
@@ -202,6 +221,9 @@
                 visualizePathInAR(path);
             });
         });
+
+        // Ensure arrow rotation updates regularly
+        setInterval(updateArrowDirection, 100);
     </script>
 </body>
 </html>
