@@ -49,7 +49,7 @@
         <label for="room-select">Select Room:</label>
         <select id="room-select">
             <option value="19.443582,72.799662">Room 1</option>
-            <option value="19.4496070, 72.8043691">Room 2</option>
+            <option value="19.4496070,72.8043691">Room 2</option>
             <option value="18.9596799,72.8099855">Room 3</option>
         </select>
     </div>
@@ -65,7 +65,7 @@
         </a-marker>
 
         <a-camera id="camera" position="0 0 0" look-controls></a-camera>
-        <a-cone id="arrow" radius-bottom="0.17" height="0.8" color="red" position="0 0 -2"></a-cone>
+        <a-cone id="arrow" radius-bottom="0.175" height="0.2" color="red" position="0 -0.2 -1" rotation="0 0 90"></a-cone>
     </a-scene>
 
     <script>
@@ -179,29 +179,38 @@
             return { x, y: 0, z };
         }
 
+        // Clear previous path visualization in AR
+        function clearPathInAR() {
+            const scene = document.querySelector('a-scene');
+            const arrows = scene.querySelectorAll('a-cone');
+            arrows.forEach(arrow => {
+                if (arrow.id !== 'arrow') {
+                    scene.removeChild(arrow);
+                }
+            });
+        }
+
         // Visualize the path in AR
         function visualizePathInAR(path) {
+            clearPathInAR(); // Clear previous arrows
             const scene = document.querySelector('a-scene');
             path.forEach(position => {
                 const arPosition = gridToARPosition(position.gridX, position.gridY, gridWidth, gridHeight);
-                console.log('AR position:', arPosition);  // Debugging log
                 const arrow = document.createElement('a-cone');
-                arrow.setAttribute('position', `${arPosition.x} 0 ${arPosition.z}`);
-                arrow.setAttribute('radius-bottom', '0.08');
-                arrow.setAttribute('height', '0.4');
-                arrow.setAttribute('color', 'blue');
+                arrow.setAttribute('position', `${arPosition.x} ${arPosition.y} ${arPosition.z}`);
+                arrow.setAttribute('radius-bottom', '0.05');
+                arrow.setAttribute('height', '0.2');
+                arrow.setAttribute('color', 'red');
+                arrow.setAttribute('rotation', '90 0 0');
                 scene.appendChild(arrow);
             });
         }
 
-        // Update the arrow's direction based on camera orientation
+        // Update the arrow's direction based on camera rotation
         function updateArrowDirection() {
-            const camera = document.querySelector('#camera');
-            const arrowEntity = document.querySelector('#arrow');
-            const cameraRotation = camera.getAttribute('rotation');
-
-            // Ensure the arrow follows the camera's direction
-            arrowEntity.setAttribute('rotation', `${cameraRotation.x} ${cameraRotation.y} ${cameraRotation.z}`);
+            const cameraRotation = document.getElementById('camera').object3D.rotation;
+            const arrow = document.getElementById('arrow');
+            arrow.setAttribute('rotation', `0 ${THREE.Math.radToDeg(cameraRotation.y)} 90`);
         }
 
         // Main logic when the user selects a room
