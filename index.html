@@ -60,10 +60,12 @@
     </div>
 
     <a-scene embedded arjs="sourceType: webcam;">
-        <a-camera id="camera" position="0 0 0" look-controls>
-</a-camera>
-            <a-cone id="arrow" radius-bottom="0.17" height="0.8" color="red" position="0 -1 -1"></a-cone>
-        
+        <a-marker preset="hiro">
+            <a-box position="0 0.5 0" material="color: blue;"></a-box>
+        </a-marker>
+
+        <a-camera id="camera" position="0 0 0" look-controls></a-camera>
+        <a-cone id="arrow" radius-bottom="0.17" height="0.8" color="red" position="0 0 -2"></a-cone>
     </a-scene>
 
     <script>
@@ -82,6 +84,7 @@
             navigator.geolocation.getCurrentPosition(position => {
                 const userLat = position.coords.latitude;
                 const userLng = position.coords.longitude;
+                console.log('User current position:', userLat, userLng);  // Debugging log
                 callback(userLat, userLng);
             }, error => {
                 console.error("Unable to retrieve location:", error);
@@ -181,6 +184,7 @@
             const scene = document.querySelector('a-scene');
             path.forEach(position => {
                 const arPosition = gridToARPosition(position.gridX, position.gridY, gridWidth, gridHeight);
+                console.log('AR position:', arPosition);  // Debugging log
                 const arrow = document.createElement('a-cone');
                 arrow.setAttribute('position', `${arPosition.x} 0 ${arPosition.z}`);
                 arrow.setAttribute('radius-bottom', '0.08');
@@ -200,26 +204,27 @@
             arrowEntity.setAttribute('rotation', `${cameraRotation.x} ${cameraRotation.y} ${cameraRotation.z}`);
         }
 
-        // Event listener for room selection
-        const roomSelect = document.getElementById('room-select');
-        roomSelect.addEventListener('change', (event) => {
-            const [lat, lng] = event.target.value.split(',').map(Number);
-            showLocationOnMap(lat, lng);
+        // Main logic when the user selects a room
+        document.getElementById('room-select').addEventListener('change', function () {
+            const roomCoordinates = this.value.split(',');
+            const roomLat = parseFloat(roomCoordinates[0]);
+            const roomLng = parseFloat(roomCoordinates[1]);
+
+            getCurrentPosition((userLat, userLng) => {
+                const userPosition = gpsToGrid(userLat, userLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
+                const goalPosition = gpsToGrid(roomLat, roomLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
+
+                const grid = Array.from({ length: gridWidth }, () => Array(gridHeight).fill(0));
+                const path = aStar(userPosition, goalPosition, grid);
+                console.log('Path to goal:', path);  // Debugging log
+
+                visualizePathInAR(path);
+                showLocationOnMap(userLat, userLng);
+            });
         });
 
-        // Initializing the AR view and map
-        getCurrentPosition((lat, lng) => {
-            showLocationOnMap(lat, lng);
-            const start = gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
-            const goal = gpsToGrid(rooms[0].lat, rooms[0].lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
-            const grid = Array(gridWidth).fill().map(() => Array(gridHeight).fill(0));
-
-            const path = aStar(start, goal, grid);
-            visualizePathInAR(path);
-        });
-
-        // Update arrow direction as the camera moves
-        document.querySelector('a-scene').addEventListener('camera-set-active', updateArrowDirection);
+        // Continuously update the arrow's direction
+        setInterval(updateArrowDirection, 100);
     </script>
 </body>
 </html>
