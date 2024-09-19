@@ -65,19 +65,13 @@
         </a-marker>
 
         <a-camera id="camera" position="0 0 0" look-controls>
-        <a-cone id="arrow" radius-bottom="0.175" height="0.2" color="red" position="0 0 -2"></a-cone></a-camera>
+        <a-cone id="arrow" radius-bottom="0.175" height="0.2" color="red" position="0 -1 -2" geometry="primitive: cone; height: 0.2" material="color: red"></a-cone></a-camera>
     </a-scene>
 
     <script>
-        const rooms = [
-            { name: 'Room 1', lat: 19.443582, lng: 72.799662 },
-            { name: 'Room 2', lat: 19.4496070, lng: 72.8043691 },
-            { name: 'Room 3', lat: 18.9596799, lng: 72.8099855 }
-        ];
-
-        const latMin = 18.9570, lngMin = 72.8090;  // Min coordinates of your map area
-        const latMax = 18.9600, lngMax = 72.8100;  // Max coordinates of your map area
-        const gridWidth = 10, gridHeight = 10;     // Define the grid size
+        const latMin = 18.9570, lngMin = 72.8090;
+        const latMax = 18.9600, lngMax = 72.8100;
+        const gridWidth = 10, gridHeight = 10;
 
         // Geolocation: Get the user's current position
         function getCurrentPosition(callback) {
@@ -102,24 +96,18 @@
             return { gridX, gridY };
         }
 
-        // Convert grid position to percentage on map (assuming map is 100x100% of its container)
-        function gridToMapPercentage(gridX, gridY, gridWidth, gridHeight) {
-            const x = (gridX / gridWidth) * 100;
-            const y = (gridY / gridHeight) * 100;
-            return { x, y };
-        }
-
-        // Show the user's current location on the map
+        // Show user's current location on map
         function showLocationOnMap(lat, lng) {
             const userGridPosition = gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
-            const { x, y } = gridToMapPercentage(userGridPosition.gridX, userGridPosition.gridY, gridWidth, gridHeight);
+            const x = (userGridPosition.gridX / gridWidth) * 100;
+            const y = (userGridPosition.gridY / gridHeight) * 100;
 
             const dot = document.getElementById('location-dot');
             dot.style.left = `${x}%`;
             dot.style.top = `${y}%`;
         }
 
-        // A* pathfinding algorithm (simplified for grid navigation)
+        // A* pathfinding algorithm (simplified)
         function aStar(start, goal, grid) {
             const openSet = [start];
             const cameFrom = new Map();
@@ -138,7 +126,6 @@
                 const current = openSet.shift();
 
                 if (current.gridX === goal.gridX && current.gridY === goal.gridY) {
-                    // Reconstruct path
                     let totalPath = [current];
                     while (cameFrom.has(current)) {
                         current = cameFrom.get(current);
@@ -147,7 +134,6 @@
                     return totalPath;
                 }
 
-                // Process neighbors
                 const neighbors = getNeighbors(current, gridWidth, gridHeight);
                 for (let neighbor of neighbors) {
                     const tentativeGScore = gScore.get(current) + 1;
@@ -162,7 +148,7 @@
             return [];
         }
 
-        // Get neighbors in a grid (4 directions)
+        // Get neighbors in grid (4 directions)
         function getNeighbors(node, gridWidth, gridHeight) {
             const neighbors = [];
             if (node.gridX > 0) neighbors.push({ gridX: node.gridX - 1, gridY: node.gridY });
@@ -172,67 +158,66 @@
             return neighbors;
         }
 
-        // Convert grid position to AR coordinates (for visualization)
-        function gridToARPosition(gridX, gridY, gridWidth, gridHeight) {
+        // Convert grid position to AR position
+        function gridToARPosition(gridX, gridY) {
             const x = (gridX / gridWidth) * 10 - 5;
             const z = (gridY / gridHeight) * 10 - 5;
             return { x, y: 0, z };
         }
 
-        // Clear previous path visualization in AR
+        // Clear previous arrows in AR scene
         function clearPathInAR() {
             const scene = document.querySelector('a-scene');
             const arrows = scene.querySelectorAll('a-cone');
             arrows.forEach(arrow => {
-                if (arrow.id !== 'arrow') {
-                    scene.removeChild(arrow);
-                }
+                if (arrow.id !== 'arrow') scene.removeChild(arrow);
             });
         }
 
-        // Visualize the path in AR
+        // Visualize path in AR
         function visualizePathInAR(path) {
-            clearPathInAR(); // Clear previous arrows
+            clearPathInAR();
             const scene = document.querySelector('a-scene');
             path.forEach(position => {
-                const arPosition = gridToARPosition(position.gridX, position.gridY, gridWidth, gridHeight);
+                const arPosition = gridToARPosition(position.gridX, position.gridY);
                 const arrow = document.createElement('a-cone');
                 arrow.setAttribute('position', `${arPosition.x} ${arPosition.y} ${arPosition.z}`);
                 arrow.setAttribute('radius-bottom', '0.05');
                 arrow.setAttribute('height', '0.2');
                 arrow.setAttribute('color', 'red');
                 arrow.setAttribute('rotation', '90 0 0');
+                arrow.setAttribute('style', 'pointer-events: none;');  // Make it untouchable
                 scene.appendChild(arrow);
             });
         }
 
-        // Update the arrow's direction based on camera rotation
+        // Update arrow direction based on camera rotation
         function updateArrowDirection() {
             const cameraRotation = document.getElementById('camera').object3D.rotation;
             const arrow = document.getElementById('arrow');
             arrow.setAttribute('rotation', `0 ${THREE.Math.radToDeg(cameraRotation.y)} 90`);
         }
 
-        // Main logic when the user selects a room
-        document.getElementById('room-select').addEventListener('change', function () {
-            const roomCoordinates = this.value.split(',');
+        // Main logic for room selection
+        document.getElementById('room-select').addEventListener('change', event => {
+            const roomCoordinates = event.target.value.split(',');
             const roomLat = parseFloat(roomCoordinates[0]);
             const roomLng = parseFloat(roomCoordinates[1]);
 
             getCurrentPosition((userLat, userLng) => {
-                const userPosition = gpsToGrid(userLat, userLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
-                const goalPosition = gpsToGrid(roomLat, roomLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
-
-                const grid = Array.from({ length: gridWidth }, () => Array(gridHeight).fill(0));
-                const path = aStar(userPosition, goalPosition, grid);
-                console.log('Path to goal:', path);  // Debugging log
-
-                visualizePathInAR(path);
                 showLocationOnMap(userLat, userLng);
+
+                const userGridPosition = gpsToGrid(userLat, userLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
+                const roomGridPosition = gpsToGrid(roomLat, roomLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
+
+                const grid = Array(gridWidth).fill().map(() => Array(gridHeight).fill(0));
+
+                const path = aStar(userGridPosition, roomGridPosition, grid);
+                visualizePathInAR(path);
             });
         });
 
-        // Continuously update the arrow's direction
+        // Continuously update arrow direction
         setInterval(updateArrowDirection, 100);
     </script>
 </body>
