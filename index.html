@@ -48,9 +48,9 @@
     <div id="hud">
         <label for="room-select">Select Room:</label>
         <select id="room-select">
-            <option value="19.443582,72.799662">304</option>
-            <option value="19.4496070,72.8043691">309</option>
-            <option value="18.9596799,72.8099855">Room 3</option>
+            <option value="19.443582,72.799662">Room 1</option>
+            <option value="19.449607,72.804369">Room 2</option>
+            <option value="18.959680,72.809986">Room 3</option>
         </select>
     </div>
 
@@ -65,25 +65,16 @@
         </a-marker>
 
         <a-camera id="camera" position="0 0 0" look-controls>
-            <a-cone id="arrow" radius-bottom="0.175" height="0.2" color="red" position="0 0 -2" geometry="primitive: cone; height: 0.2" material="color: red"></a-cone>
+            <a-cone id="arrow" radius-bottom="0.175" height="0.2" color="red" position="0 0 -2"></a-cone>
         </a-camera>
     </a-scene>
 
     <script>
-        const latMin = 19.268092, lngMin = 72.967042;
-        const latMax = 19.268065, lngMax = 72.967940;
-        const gridWidth = 10, gridHeight = 10;
+        let destination = null;
 
-        // Geolocation: Get the user's current position
-        function getCurrentPosition(callback) {
-            navigator.geolocation.getCurrentPosition(position => {
-                const userLat = position.coords.latitude;
-                const userLng = position.coords.longitude;
-                callback(userLat, userLng);
-            }, error => {
-                console.error("Unable to retrieve location:", error);
-            });
-        }
+        const latMin = 18.9570, lngMin = 72.8090;  // Min coordinates of your map area
+        const latMax = 18.9600, lngMax = 72.8100;  // Max coordinates of your map area
+        const gridWidth = 10, gridHeight = 10;     // Define the grid size
 
         // Convert GPS coordinates to grid position
         function gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight) {
@@ -96,18 +87,7 @@
             return { gridX, gridY };
         }
 
-        // Show user's current location on map
-        function showLocationOnMap(lat, lng) {
-            const userGridPosition = gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
-            const x = (userGridPosition.gridX / gridWidth) * 100;
-            const y = (userGridPosition.gridY / gridHeight) * 100;
-
-            const dot = document.getElementById('location-dot');
-            dot.style.left = `${x}%`;
-            dot.style.top = `${y}%`;
-        }
-
-        // A* pathfinding algorithm (simplified)
+        // A* pathfinding algorithm (simplified for grid navigation)
         function aStar(start, goal, grid) {
             const openSet = [start];
             const cameFrom = new Map();
@@ -126,6 +106,7 @@
                 const current = openSet.shift();
 
                 if (current.gridX === goal.gridX && current.gridY === goal.gridY) {
+                    // Reconstruct path
                     let totalPath = [current];
                     while (cameFrom.has(current)) {
                         current = cameFrom.get(current);
@@ -148,7 +129,6 @@
             return [];
         }
 
-        // Get neighbors in grid (4 directions)
         function getNeighbors(node, gridWidth, gridHeight) {
             const neighbors = [];
             if (node.gridX > 0) neighbors.push({ gridX: node.gridX - 1, gridY: node.gridY });
@@ -158,67 +138,84 @@
             return neighbors;
         }
 
-        // Convert grid position to AR position
-        function gridToARPosition(gridX, gridY) {
+        // Convert grid position to AR coordinates
+        function gridToARPosition(gridX, gridY, gridWidth, gridHeight) {
             const x = (gridX / gridWidth) * 10 - 5;
             const z = (gridY / gridHeight) * 10 - 5;
             return { x, y: 0, z };
         }
 
-        // Clear previous arrows in AR scene, but keep the original arrow
+        // Clear previous path visualization in AR
         function clearPathInAR() {
             const scene = document.querySelector('a-scene');
             const arrows = scene.querySelectorAll('a-cone');
             arrows.forEach(arrow => {
-                if (arrow.id !== 'arrow') scene.removeChild(arrow);  // Keep the main arrow
+                if (arrow.id !== 'arrow') {
+                    scene.removeChild(arrow);
+                }
             });
         }
 
-        // Visualize path in AR
+        // Visualize the path in AR
         function visualizePathInAR(path) {
-            clearPathInAR();
+            clearPathInAR(); // Clear previous arrows
             const scene = document.querySelector('a-scene');
             path.forEach(position => {
-                const arPosition = gridToARPosition(position.gridX, position.gridY);
+                const arPosition = gridToARPosition(position.gridX, position.gridY, gridWidth, gridHeight);
                 const arrow = document.createElement('a-cone');
                 arrow.setAttribute('position', `${arPosition.x} ${arPosition.y} ${arPosition.z}`);
                 arrow.setAttribute('radius-bottom', '0.05');
                 arrow.setAttribute('height', '0.2');
                 arrow.setAttribute('color', 'red');
                 arrow.setAttribute('rotation', '90 0 0');
-                arrow.setAttribute('style', 'pointer-events: none;');  // Make it untouchable
                 scene.appendChild(arrow);
             });
         }
 
-        // Update arrow direction based on camera rotation
-        function updateArrowDirection() {
-            const cameraRotation = document.getElementById('camera').object3D.rotation;
+        // Update arrow direction towards the destination
+        function updateArrowDirection(userLat, userLng) {
+            if (!destination) return;
+
             const arrow = document.getElementById('arrow');
-            arrow.setAttribute('rotation', `0 ${THREE.Math.radToDeg(cameraRotation.y)} 0`);
+            const dx = destination.lng - userLng;
+            const dy = destination.lat - userLat;
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+            arrow.setAttribute('rotation', `0 ${-angle} 0`);
         }
 
-        // Event listener for room selection
-        document.getElementById('room-select').addEventListener('change', event => {
-            const roomCoordinates = event.target.value.split(',');
-            const roomLat = parseFloat(roomCoordinates[0]);
-            const roomLng = parseFloat(roomCoordinates[1]);
+        // Handle room selection change
+        document.getElementById('room-select').addEventListener('change', function() {
+            const coords = this.value.split(',');
+            const lat = parseFloat(coords[0]);
+            const lng = parseFloat(coords[1]);
 
-            getCurrentPosition((userLat, userLng) => {
-                showLocationOnMap(userLat, userLng);
+            destination = { lat, lng };
 
-                const userGridPosition = gpsToGrid(userLat, userLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
-                const roomGridPosition = gpsToGrid(roomLat, roomLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
-
-                const grid = Array(gridWidth).fill().map(() => Array(gridHeight).fill(0));
-
-                const path = aStar(userGridPosition, roomGridPosition, grid);
-                visualizePathInAR(path);
-            });
+            const selectedRoom = this.selectedIndex + 1;
+            window.location.href = `https://didfu.github.io/test${selectedRoom}`;
         });
 
-        // Continuously update arrow direction
-        setInterval(updateArrowDirection, 100);
+        // Geolocation: Get the user's current position
+        function getCurrentPosition() {
+            navigator.geolocation.watchPosition(position => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+
+                const userPosition = gpsToGrid(userLat, userLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
+                const goalPosition = gpsToGrid(destination.lat, destination.lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
+
+                const grid = Array.from({ length: gridWidth }, () => Array(gridHeight).fill(0));
+                const path = aStar(userPosition, goalPosition, grid);
+
+                visualizePathInAR(path);
+                updateArrowDirection(userLat, userLng);
+            }, error => {
+                console.error("Unable to retrieve location:", error);
+            });
+        }
+
+        getCurrentPosition();
     </script>
 </body>
 </html>
