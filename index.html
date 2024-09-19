@@ -65,7 +65,8 @@
         </a-marker>
 
         <a-camera id="camera" position="0 0 0" look-controls>
-        <a-cone id="arrow" radius-bottom="0.175" height="0.2" color="red" position="0 -1 -2" geometry="primitive: cone; height: 0.2" material="color: red"></a-cone></a-camera>
+            <a-cone id="arrow" radius-bottom="0.175" height="0.2" color="red" position="0 0 -2" geometry="primitive: cone; height: 0.2" material="color: red"></a-cone>
+        </a-camera>
     </a-scene>
 
     <script>
@@ -78,7 +79,6 @@
             navigator.geolocation.getCurrentPosition(position => {
                 const userLat = position.coords.latitude;
                 const userLng = position.coords.longitude;
-                console.log('User current position:', userLat, userLng);  // Debugging log
                 callback(userLat, userLng);
             }, error => {
                 console.error("Unable to retrieve location:", error);
@@ -165,12 +165,12 @@
             return { x, y: 0, z };
         }
 
-        // Clear previous arrows in AR scene
+        // Clear previous arrows in AR scene, but keep the original arrow
         function clearPathInAR() {
             const scene = document.querySelector('a-scene');
             const arrows = scene.querySelectorAll('a-cone');
             arrows.forEach(arrow => {
-                if (arrow.id !== 'arrow') scene.removeChild(arrow);
+                if (arrow.id !== 'arrow') scene.removeChild(arrow);  // Keep the main arrow
             });
         }
 
@@ -195,10 +195,10 @@
         function updateArrowDirection() {
             const cameraRotation = document.getElementById('camera').object3D.rotation;
             const arrow = document.getElementById('arrow');
-            arrow.setAttribute('rotation', `0 ${THREE.Math.radToDeg(cameraRotation.y)} 90`);
+            arrow.setAttribute('rotation', `0 ${THREE.Math.radToDeg(cameraRotation.y)} 0`);
         }
 
-        // Main logic for room selection
+        // Event listener for room selection
         document.getElementById('room-select').addEventListener('change', event => {
             const roomCoordinates = event.target.value.split(',');
             const roomLat = parseFloat(roomCoordinates[0]);
