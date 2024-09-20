@@ -158,19 +158,11 @@
 
         // Visualize the path in AR
         function visualizePathInAR(path) {
-            clearPathInAR(); // Clear previous arrows
             const scene = document.querySelector('a-scene');
             path.forEach(position => {
                 const arPosition = gridToARPosition(position.gridX, position.gridY, gridWidth, gridHeight);
                 const arrow = document.createElement('a-cone');
                 arrow.setAttribute('position', `${arPosition.x} ${arPosition.y} ${arPosition.z}`);
-                arrow.setAttribute('radius-bottom', '0.05');
-                arrow.setAttribute('height', '0.2');
-                arrow.setAttribute('color', 'red');
-                arrow.setAttribute('rotation', '0 0 0');
-                scene.appendChild(arrow);
-            });
-        }
 
         // Update arrow direction towards the destination
         function updateArrowDirection(userLat, userLng) {
@@ -181,7 +173,7 @@
             const dy = destination.lat - userLat;
             const angle = Math.atan2(dy, dx) * 180 / Math.PI;
 
-            arrow.setAttribute('rotation', `0 ${-angle} 0`);
+            arrow.setAttribute('rotation', `${-angle} ${-angle} 0`);
         }
 
         // Handle room selection change
