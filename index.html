@@ -76,7 +76,7 @@
 
         const latMin = 18.9570, lngMin = 72.8090;  // Min coordinates of your map area
         const latMax = 18.9600, lngMax = 72.8100;  // Max coordinates of your map area
-        const gridWidth = 10, gridHeight = 10;     // Define the grid size
+        const gridWidth = 7, gridHeight = 7;     // Define the grid size
 
         // Convert GPS coordinates to grid position
         function gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight) {
@@ -169,7 +169,7 @@
                 arrow.setAttribute('radius-bottom', '0.05');
                 arrow.setAttribute('height', '0.2');
                 arrow.setAttribute('color', 'red');
-                arrow.setAttribute('rotation', '90 0 0');
+                arrow.setAttribute('rotation', '0 0 0');
                 scene.appendChild(arrow);
             });
         }
