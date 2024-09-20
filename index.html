@@ -209,7 +209,7 @@
                 const path = aStar(userPosition, goalPosition, grid);
 
                 visualizePathInAR(path);
-                updateArrowDirection(userLat, userLng);
+                updateArrowDirection(userLat, userLng); // Ensure this function is called here
             }, error => {
                 console.error("Unable to retrieve location:", error);
             });
