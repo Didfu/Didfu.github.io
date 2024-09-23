@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AR Navigation</title>
+    <title>AR Navigation with Grid Map</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar-nft.js"></script>
     <style>
@@ -70,14 +70,27 @@
     </a-scene>
 
     <script>
-        let destination = null;
+        const destination = { lat: 19.443582, lng: 72.799662 };
 
-        const latMin = 18.9570, lngMin = 72.8090;  // Min coordinates of your map area
-        const latMax = 18.9600, lngMax = 72.8100;  // Max coordinates of your map area
-        const gridWidth = 7, gridHeight = 7;     // Define the grid size
+        // Define a grid matrix: 0 is walkable, 1 is an obstacle
+        const gridMatrix = [
+            [0, 0, 0, 1, 0, 0, 0],
+            [0, 1, 0, 1, 0, 1, 0],
+            [0, 1, 0, 0, 0, 1, 0],
+            [0, 0, 1, 1, 0, 0, 0],
+            [0, 1, 0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [1, 1, 0, 1, 0, 0, 0]
+        ];
+
+        const gridWidth = gridMatrix[0].length;
+        const gridHeight = gridMatrix.length;
+
+        const latMin = 18.9570, lngMin = 72.8090;  // Min coordinates of the map area
+        const latMax = 18.9600, lngMax = 72.8100;  // Max coordinates of the map area
 
         // Convert GPS coordinates to grid position
-        function gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight) {
+        function gpsToGrid(lat, lng) {
             const normalizedLat = (lat - latMin) / (latMax - latMin);
             const normalizedLng = (lng - lngMin) / (lngMax - lngMin);
 
@@ -87,12 +100,22 @@
             return { gridX, gridY };
         }
 
-        // A* pathfinding algorithm (simplified for grid navigation)
+        // A* pathfinding algorithm
         function aStar(start, goal, grid) {
             const openSet = [start];
             const cameFrom = new Map();
             const gScore = new Map();
             const fScore = new Map();
+
+​        ​document​.​getElementById​(​'room-select'​)​.​addEventListener​(​'change'​,​ ​function​(​)​ ​{  
+​            ​const​ ​coords​ ​=​ ​this​.​value​.​split​(​','​)​;  
+​            ​const​ ​lat​ ​=​ ​parseFloat​(​coords​[​0​]​)​;  
+​            ​const​ ​lng​ ​=​ ​parseFloat​(​coords​[​1​]​)​;  
+​ 
+​            ​destination​ ​=​ ​{​ lat​,​ lng ​}​;  
+​            ​const​ ​selectedRoom​ ​=​ ​this​.​selectedIndex​ ​+​ ​1​;  
+​           ​window​.​location​.href=​ ​`https://didfu.github.io/test​${​selectedRoom​}​`​;  
+ ​}​)​;
 
             function heuristic(a, b) {
                 return Math.abs(a.gridX - b.gridX) + Math.abs(a.gridY - b.gridY);
@@ -106,7 +129,6 @@
                 const current = openSet.shift();
 
                 if (current.gridX === goal.gridX && current.gridY === goal.gridY) {
-                    // Reconstruct path
                     let totalPath = [current];
                     while (cameFrom.has(current)) {
                         current = cameFrom.get(current);
@@ -129,12 +151,17 @@
             return [];
         }
 
+        // Get neighbors while checking for walkable paths
         function getNeighbors(node, gridWidth, gridHeight) {
             const neighbors = [];
-            if (node.gridX > 0) neighbors.push({ gridX: node.gridX - 1, gridY: node.gridY });
-            if (node.gridX < gridWidth - 1) neighbors.push({ gridX: node.gridX + 1, gridY: node.gridY });
-            if (node.gridY > 0) neighbors.push({ gridX: node.gridX, gridY: node.gridY - 1 });
-            if (node.gridY < gridHeight - 1) neighbors.push({ gridX: node.gridX, gridY: node.gridY + 1 });
+            if (node.gridX > 0 && gridMatrix[node.gridY][node.gridX - 1] === 0) 
+                neighbors.push({ gridX: node.gridX - 1, gridY: node.gridY });
+            if (node.gridX < gridWidth - 1 && gridMatrix[node.gridY][node.gridX + 1] === 0) 
+                neighbors.push({ gridX: node.gridX + 1, gridY: node.gridY });
+            if (node.gridY > 0 && gridMatrix[node.gridY - 1][node.gridX] === 0) 
+                neighbors.push({ gridX: node.gridX, gridY: node.gridY - 1 });
+            if (node.gridY < gridHeight - 1 && gridMatrix[node.gridY + 1][node.gridX] === 0) 
+                neighbors.push({ gridX: node.gridX, gridY: node.gridY + 1 });
             return neighbors;
         }
 
@@ -145,7 +172,21 @@
             return { x, y: 0, z };
         }
 
-        // Clear previous path visualization in AR
+        // Visualize the path in AR
+        function visualizePathInAR(path) {
+            const scene = document.querySelector('a-scene');
+            path.forEach(position => {
+                const arPosition = gridToARPosition(position.gridX, position.gridY, gridWidth, gridHeight);
+                const arrow = document.createElement('a-cone');
+                arrow.setAttribute('position', `${arPosition.x} ${arPosition.y} ${arPosition.z}`);
+                arrow.setAttribute('radius-bottom', "0.175");
+                arrow.setAttribute('height', "0.2");
+                arrow.setAttribute('color', 'red');
+                scene.appendChild(arrow);
+            });
+        }
+
+        // Clear previous path visualization
         function clearPathInAR() {
             const scene = document.querySelector('a-scene');
             const arrows = scene.querySelectorAll('a-cone');
@@ -156,18 +197,8 @@
             });
         }
 
-        // Visualize the path in AR
-        function visualizePathInAR(path) {
-            const scene = document.querySelector('a-scene');
-            path.forEach(position => {
-                const arPosition = gridToARPosition(position.gridX, position.gridY, gridWidth, gridHeight);
-                const arrow = document.createElement('a-cone');
-                arrow.setAttribute('position', `${arPosition.x} ${arPosition.y} ${arPosition.z}`);
-
-        // Update arrow direction towards the destination
+        // Update the arrow to point towards the destination
         function updateArrowDirection(userLat, userLng) {
-            if (!destination) return;
-
             const arrow = document.getElementById('arrow');
             const dx = destination.lng - userLng;
             const dy = destination.lat - userLat;
@@ -176,32 +207,20 @@
             arrow.setAttribute('rotation', `${-angle} ${-angle} 0`);
         }
 
-        // Handle room selection change
-        document.getElementById('room-select').addEventListener('change', function() {
-            const coords = this.value.split(',');
-            const lat = parseFloat(coords[0]);
-            const lng = parseFloat(coords[1]);
-
-            destination = { lat, lng };
-
-            const selectedRoom = this.selectedIndex + 1;
-            window.location.href = `https://didfu.github.io/test${selectedRoom}`;
-        });
-
-        // Geolocation: Get the user's current position
+        // Get user's position and calculate path
         function getCurrentPosition() {
             navigator.geolocation.watchPosition(position => {
                 const userLat = position.coords.latitude;
                 const userLng = position.coords.longitude;
 
-                const userPosition = gpsToGrid(userLat, userLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
-                const goalPosition = gpsToGrid(destination.lat, destination.lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
+                const userPosition = gpsToGrid(userLat, userLng);
+                const goalPosition = gpsToGrid(destination.lat, destination.lng);
 
-                const grid = Array.from({ length: gridWidth }, () => Array(gridHeight).fill(0));
-                const path = aStar(userPosition, goalPosition, grid);
+                const path = aStar(userPosition, goalPosition, gridMatrix);
 
-                visualizePathInAR(path);
-                updateArrowDirection(userLat, userLng); // Ensure this function is called here
+                clearPathInAR();  // Clear old path
+                visualizePathInAR(path);  // Visualize new path
+                updateArrowDirection(userLat, userLng);  // Update arrow direction
             }, error => {
                 console.error("Unable to retrieve location:", error);
             });
