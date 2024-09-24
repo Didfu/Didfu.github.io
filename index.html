@@ -191,7 +191,7 @@
             const dy = destination.lat - userLat;
             const angle = Math.atan2(dy, dx) * 180 / Math.PI;
 
-            arrow.setAttribute('rotation', `${-angle} 0 0`); // Updated rotation for AR direction
+            arrow.setAttribute('rotation', `0 ${-angle} 0`); // Correct rotation for AR direction
         }
 
         // Get user's position and calculate path
@@ -226,7 +226,7 @@
             let roomURL = '';
             switch (this.value) {
                 case "19.443582,72.799662":
-                    roomURL = 'https://didfu.github.io/303';
+                    roomURL = 'https://didfu.github.io';
                     break;
                 case "19.449607,72.804369":
                     roomURL = 'https://didfu.github.io/309';
