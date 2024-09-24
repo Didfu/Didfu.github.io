@@ -84,26 +84,38 @@
         });
 
         AFRAME.registerComponent('arrow-behavior', {
-            tick: function () {
-                const camera = document.querySelector('[camera]');
-                const arrow = document.querySelector('#arrow');
+    tick: function () {
+        const camera = document.querySelector('[camera]');
+        const arrow = document.querySelector('#arrow');
 
-                if (camera && arrow && destination) {
-                    // Ensure the arrow is always at a little distance in front of the camera
-                    const cameraWorldPosition = new THREE.Vector3();
-                    camera.object3D.getWorldPosition(cameraWorldPosition);
+        // Convert geographical coordinates to 3D coordinates
+        const destination = this.geoTo3D(19.443582, 72.799662);
 
-                    const direction = new THREE.Vector3();
-                    direction.subVectors(destination, cameraWorldPosition).normalize();
+        if (camera && arrow && destination) {
+            // Ensure the arrow is always at a little distance in front of the camera
+            const cameraWorldPosition = new THREE.Vector3();
+            camera.object3D.getWorldPosition(cameraWorldPosition);
 
-                    const arrowDirection = new THREE.Vector3(0, 0, -1);
-                    const rotationQuaternion = new THREE.Quaternion().setFromUnitVectors(arrowDirection, direction);
+            const direction = new THREE.Vector3();
+            direction.subVectors(destination, cameraWorldPosition).normalize();
 
-                    arrow.object3D.position.set(0, 0, -5).applyMatrix4(camera.object3D.matrixWorld);
-                    arrow.object3D.setRotationFromQuaternion(rotationQuaternion);
-                }
-            }
-        });
+            const arrowDirection = new THREE.Vector3(0, 0, -1);
+            const rotationQuaternion = new THREE.Quaternion().setFromUnitVectors(arrowDirection, direction);
+
+            arrow.object3D.position.set(0, 0, -5).applyMatrix4(camera.object3D.matrixWorld);
+            arrow.object3D.setRotationFromQuaternion(rotationQuaternion);
+        }
+    },
+
+    geoTo3D: function(lat, lon) {
+        // Example conversion; this will depend on your specific scene setup
+        const scale = 1000; // Adjust this scale factor based on your map
+        const x = lon * scale;  // Convert longitude to X
+        const z = lat * scale;   // Convert latitude to Z
+        return new THREE.Vector3(x, 0, z); // Y coordinate is 0 for ground level
+    }
+});
+
 
         document.querySelector('#arrow').setAttribute('arrow-behavior', '');
 
