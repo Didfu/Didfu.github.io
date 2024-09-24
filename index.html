@@ -154,22 +154,28 @@
 
         // Convert grid position to AR coordinates
         function gridToARPosition(gridX, gridY, gridWidth, gridHeight) {
-            const scaleFactor = 10 / 999; // Scale factor for converting grid coordinates to meters
-            const x = (gridX * scaleFactor) - (10 / 2);  // Centering the AR space
-            const z = (gridY * scaleFactor) - (10 / 2); // Centering the AR space
+            const x = (gridX / gridWidth) * 10 - 5;  // Adjust the scale based on your AR space
+            const z = (gridY / gridHeight) * 10 - 5; // Adjust the scale based on your AR space
             return { x, y: 0, z };
         }
 
         // Visualize the path in AR
         function visualizePathInAR(path) {
             const scene = document.querySelector('a-scene');
-            path.forEach(position => {
+            path.forEach((position, index) => {
                 const arPosition = gridToARPosition(position.gridX, position.gridY, gridWidth, gridHeight);
                 const arrow = document.createElement('a-cone');
                 arrow.setAttribute('position', `${arPosition.x} ${arPosition.y} ${arPosition.z}`);
                 arrow.setAttribute('radius-bottom', "0.175");
                 arrow.setAttribute('height', "0.2");
                 arrow.setAttribute('color', 'red');
+
+                // Add look-at component to make the arrow face the next point
+                if (index < path.length - 1) {
+                    const nextPosition = gridToARPosition(path[index + 1].gridX, path[index + 1].gridY, gridWidth, gridHeight);
+                    arrow.setAttribute('look-at', `${nextPosition.x} ${nextPosition.y} ${nextPosition.z}`);
+                }
+
                 scene.appendChild(arrow);
             });
         }
@@ -185,30 +191,38 @@
             });
         }
 
-        // Get current position using Geolocation API
+        // Update the arrow to follow the user
+        function updateArrowPosition(userGridPos) {
+            const arrow = document.getElementById('arrow');
+            const userPos = gridToARPosition(userGridPos.gridX, userGridPos.gridY, gridWidth, gridHeight);
+            arrow.setAttribute('position', `${userPos.x} ${userPos.y} ${userPos.z}`);
+
+            // Make the arrow look at the destination
+            const destinationGridPos = gpsToGrid(destination.lat, destination.lng);
+            const destinationARPos = gridToARPosition(destinationGridPos.gridX, destinationGridPos.gridY, gridWidth, gridHeight);
+            arrow.setAttribute('look-at', `${destinationARPos.x} ${destinationARPos.y} ${destinationARPos.z}`);
+        }
+
+        // Get current position of the user
         function getCurrentPosition() {
             navigator.geolocation.watchPosition((position) => {
                 const userCoords = { lat: position.coords.latitude, lng: position.coords.longitude };
                 const userGridPos = gpsToGrid(userCoords.lat, userCoords.lng);
-                const arrow = document.getElementById('arrow');
-
+                
+                // Update the arrow's position and direction
+                updateArrowPosition(userGridPos);
+                
                 const destinationGridPos = gpsToGrid(destination.lat, destination.lng);
                 const path = aStar(userGridPos, destinationGridPos, gridMatrix);
                 clearPathInAR();
                 visualizePathInAR(path);
-                
-                const dotPosition = gridToARPosition(userGridPos.gridX, userGridPos.gridY, gridWidth, gridHeight);
-                const locationDot = document.getElementById('location-dot');
-                locationDot.style.left = `${dotPosition.x}px`;
-                locationDot.style.top = `${dotPosition.z}px`;
             });
         }
 
-        // Load the grid and start the location tracking
+        // Load the grid and start position tracking
         loadGrid().then(() => {
             getCurrentPosition();
         });
-
         document.getElementById('room-select').addEventListener('change', function() {
             const coords = this.value.split(',');
             const lat = parseFloat(coords[0]);
@@ -218,9 +232,6 @@
             destination.lng = lng;
             let roomURL = '';
             switch (this.value) {
-                case "19.443582,72.799662":
-                    roomURL = 'https://didfu.github.io';
-                    break;
                 case "19.449607,72.804369":
                     roomURL = 'https://didfu.github.io/309';
                     break;
