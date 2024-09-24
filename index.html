@@ -71,158 +71,64 @@
 
     <script>
         const destination = { lat: 19.443582, lng: 72.799662 };
-        let gridMatrix = []; // Declare the gridMatrix
+        let gridMatrix = [];
 
         // Load grid from local file
         async function loadGrid() {
-            const response = await fetch('mapgrid.txt'); // Fetch the grid file
-            const text = await response.text(); // Get the text content
-            gridMatrix = text.trim().split('\n').map(line => line.split(' ').map(Number)); // Parse grid data
+            const response = await fetch('mapgrid.txt');
+            const text = await response.text();
+            gridMatrix = text.trim().split('\n').map(line => line.split(' ').map(Number));
         }
 
-        const gridWidth = 999; // Set grid width
-        const gridHeight = 999; // Set grid height
+        const gridWidth = 999;
+        const gridHeight = 999;
 
-        const latMin = 18.9570, lngMin = 72.7990;  // Min coordinates of the map area
-        const latMax = 19.4500, lngMax = 72.8100;  // Max coordinates of the map area
+        const latMin = 18.9570, lngMin = 72.7990;
+        const latMax = 19.4500, lngMax = 72.8100;
 
-        // Convert GPS coordinates to grid position
         function gpsToGrid(lat, lng) {
             const normalizedLat = (lat - latMin) / (latMax - latMin);
             const normalizedLng = (lng - lngMin) / (lngMax - lngMin);
-
             const gridX = Math.floor(normalizedLng * gridWidth);
             const gridY = Math.floor((1 - normalizedLat) * gridHeight);
-
             return { gridX, gridY };
         }
 
-        // A* pathfinding algorithm
-        function aStar(start, goal, grid) {
-            const openSet = [start];
-            const cameFrom = new Map();
-            const gScore = new Map();
-            const fScore = new Map();
-
-            function heuristic(a, b) {
-                return Math.abs(a.gridX - b.gridX) + Math.abs(a.gridY - b.gridY);
-            }
-
-            gScore.set(start, 0);
-            fScore.set(start, heuristic(start, goal));
-
-            while (openSet.length > 0) {
-                openSet.sort((a, b) => fScore.get(a) - fScore.get(b));
-                const current = openSet.shift();
-
-                if (current.gridX === goal.gridX && current.gridY === goal.gridY) {
-                    let totalPath = [current];
-                    while (cameFrom.has(current)) {
-                        current = cameFrom.get(current);
-                        totalPath.unshift(current);
-                    }
-                    return totalPath;
-                }
-
-                const neighbors = getNeighbors(current, gridWidth, gridHeight);
-                for (let neighbor of neighbors) {
-                    const tentativeGScore = gScore.get(current) + 1;
-                    if (!gScore.has(neighbor) || tentativeGScore < gScore.get(neighbor)) {
-                        cameFrom.set(neighbor, current);
-                        gScore.set(neighbor, tentativeGScore);
-                        fScore.set(neighbor, tentativeGScore + heuristic(neighbor, goal));
-                        if (!openSet.includes(neighbor)) openSet.push(neighbor);
-                    }
-                }
-            }
-            return [];
-        }
-
-        // Get neighbors while checking for walkable paths
-        function getNeighbors(node, gridWidth, gridHeight) {
-            const neighbors = [];
-            if (node.gridX > 0 && gridMatrix[node.gridY][node.gridX - 1] === 0) 
-                neighbors.push({ gridX: node.gridX - 1, gridY: node.gridY });
-            if (node.gridX < gridWidth - 1 && gridMatrix[node.gridY][node.gridX + 1] === 0) 
-                neighbors.push({ gridX: node.gridX + 1, gridY: node.gridY });
-            if (node.gridY > 0 && gridMatrix[node.gridY - 1][node.gridX] === 0) 
-                neighbors.push({ gridX: node.gridX, gridY: node.gridY - 1 });
-            if (node.gridY < gridHeight - 1 && gridMatrix[node.gridY + 1][node.gridX] === 0) 
-                neighbors.push({ gridX: node.gridX, gridY: node.gridY + 1 });
-            return neighbors;
-        }
-
-        // Convert grid position to AR coordinates
         function gridToARPosition(gridX, gridY, gridWidth, gridHeight) {
-            const x = (gridX / gridWidth) * 10 - 5;  // Adjust the scale based on your AR space
-            const z = (gridY / gridHeight) * 10 - 5; // Adjust the scale based on your AR space
+            const x = (gridX / gridWidth) * 2 - 1;  // Adjust the scale based on your AR space
+            const z = (gridY / gridHeight) * 2 - 1; // Adjust the scale based on your AR space
             return { x, y: 0, z };
         }
 
-        // Visualize the path in AR
-        function visualizePathInAR(path) {
-            const scene = document.querySelector('a-scene');
-            path.forEach((position, index) => {
-                const arPosition = gridToARPosition(position.gridX, position.gridY, gridWidth, gridHeight);
-                const arrow = document.createElement('a-cone');
-                arrow.setAttribute('position', `${arPosition.x} ${arPosition.y} ${arPosition.z}`);
-                arrow.setAttribute('radius-bottom', "0.175");
-                arrow.setAttribute('height', "0.2");
-                arrow.setAttribute('color', 'red');
-
-                // Add look-at component to make the arrow face the next point
-                if (index < path.length - 1) {
-                    const nextPosition = gridToARPosition(path[index + 1].gridX, path[index + 1].gridY, gridWidth, gridHeight);
-                    arrow.setAttribute('look-at', `${nextPosition.x} ${nextPosition.y} ${nextPosition.z}`);
-                }
-
-                scene.appendChild(arrow);
-            });
-        }
-
-        // Clear previous path visualization
-        function clearPathInAR() {
-            const scene = document.querySelector('a-scene');
-            const arrows = scene.querySelectorAll('a-cone');
-            arrows.forEach(arrow => {
-                if (arrow.id !== 'arrow') {
-                    scene.removeChild(arrow);
-                }
-            });
-        }
-
-        // Update the arrow to follow the user
-        function updateArrowPosition(userGridPos) {
+        function updateArrowDirection(userLat, userLng) {
             const arrow = document.getElementById('arrow');
-            const userPos = gridToARPosition(userGridPos.gridX, userGridPos.gridY, gridWidth, gridHeight);
-            arrow.setAttribute('position', `${userPos.x} ${userPos.y} ${userPos.z}`);
+            const dx = destination.lng - userLng;
+            const dy = destination.lat - userLat;
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
 
-            // Make the arrow look at the destination
-            const destinationGridPos = gpsToGrid(destination.lat, destination.lng);
-            const destinationARPos = gridToARPosition(destinationGridPos.gridX, destinationGridPos.gridY, gridWidth, gridHeight);
-            arrow.setAttribute('look-at', `${destinationARPos.x} ${destinationARPos.y} ${destinationARPos.z}`);
+            // Place arrow directly in front of the camera
+            arrow.setAttribute('rotation', `0 ${-angle} 0`); // Adjust Y rotation
         }
 
-        // Get current position of the user
         function getCurrentPosition() {
-            navigator.geolocation.watchPosition((position) => {
-                const userCoords = { lat: position.coords.latitude, lng: position.coords.longitude };
-                const userGridPos = gpsToGrid(userCoords.lat, userCoords.lng);
-                
-                // Update the arrow's position and direction
-                updateArrowPosition(userGridPos);
-                
-                const destinationGridPos = gpsToGrid(destination.lat, destination.lng);
-                const path = aStar(userGridPos, destinationGridPos, gridMatrix);
-                clearPathInAR();
-                visualizePathInAR(path);
+            navigator.geolocation.watchPosition(position => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+
+                updateArrowDirection(userLat, userLng);
+
+                const userGridPos = gpsToGrid(userLat, userLng);
+                const locationDot = document.getElementById('location-dot');
+                const dotPosition = gridToARPosition(userGridPos.gridX, userGridPos.gridY, gridWidth, gridHeight);
+                locationDot.style.left = `${dotPosition.x * 100}px`; // Scale for visibility
+                locationDot.style.top = `${dotPosition.z * 100}px`;  // Scale for visibility
             });
         }
 
-        // Load the grid and start position tracking
         loadGrid().then(() => {
             getCurrentPosition();
         });
+
         document.getElementById('room-select').addEventListener('change', function() {
             const coords = this.value.split(',');
             const lat = parseFloat(coords[0]);
@@ -232,6 +138,9 @@
             destination.lng = lng;
             let roomURL = '';
             switch (this.value) {
+                case "19.443582,72.799662":
+                    roomURL = 'https://didfu.github.io';
+                    break;
                 case "19.449607,72.804369":
                     roomURL = 'https://didfu.github.io/309';
                     break;
