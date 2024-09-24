@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AR Navigation</title>
+    <title>AR Navigation with Grid Map</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar-nft.js"></script>
     <style>
@@ -48,9 +48,9 @@
     <div id="hud">
         <label for="room-select">Select Room:</label>
         <select id="room-select">
-            <option value="19.443582,72.799662">309</option>
-            <option value="19.4496070,72.8043691">Room 2</option>
-            <option value="18.9596799,72.8099855">Room 3</option>
+            <option value="18.959680,72.809986">305</option>
+            <option value="19.449607,72.804369">309</option>
+            <option value="19.443582,72.799662">303</option>
         </select>
     </div>
 
@@ -65,35 +65,32 @@
         </a-marker>
 
         <a-camera id="camera" position="0 0 0" look-controls>
-        <a-cone id="arrow" radius-bottom="0.175" height="0.2" color="red" position="0 -1 -2" rotation="0 90 0"></a-cone>
+            <a-cone id="arrow" radius-bottom="0.175" height="0.2" color="red" position="0 0 -2"></a-cone>
         </a-camera>
     </a-scene>
 
     <script>
-        const rooms = [
-            { name: 'Room 1', lat: 19.443582, lng: 72.799662 },
-            { name: 'Room 2', lat: 19.4496070, lng: 72.8043691 },
-            { name: 'Room 3', lat: 18.9596799, lng: 72.8099855 }
+        const destination = { lat: 19.443582, lng: 72.799662 };
+
+        // Define a grid matrix: 0 is walkable, 1 is an obstacle
+        const gridMatrix = [
+            [0, 0, 0, 1, 0, 0, 0],
+            [0, 1, 0, 1, 0, 1, 0],
+            [0, 1, 0, 0, 0, 1, 0],
+            [0, 0, 1, 1, 0, 0, 0],
+            [0, 1, 0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [1, 1, 0, 1, 0, 0, 0]
         ];
 
-        const latMin = 18.9570, lngMin = 72.8090;  // Min coordinates of your map area
-        const latMax = 18.9600, lngMax = 72.8100;  // Max coordinates of your map area
-        const gridWidth = 10, gridHeight = 10;     // Define the grid size
+        const gridWidth = gridMatrix[0].length;
+        const gridHeight = gridMatrix.length;
 
-        // Geolocation: Get the user's current position
-        function getCurrentPosition(callback) {
-            navigator.geolocation.getCurrentPosition(position => {
-                const userLat = position.coords.latitude;
-                const userLng = position.coords.longitude;
-                console.log('User current position:', userLat, userLng);  // Debugging log
-                callback(userLat, userLng);
-            }, error => {
-                console.error("Unable to retrieve location:", error);
-            });
-        }
+        const latMin = 18.9570, lngMin = 72.8090;  // Min coordinates of the map area
+        const latMax = 18.9600, lngMax = 72.8100;  // Max coordinates of the map area
 
         // Convert GPS coordinates to grid position
-        function gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight) {
+        function gpsToGrid(lat, lng) {
             const normalizedLat = (lat - latMin) / (latMax - latMin);
             const normalizedLng = (lng - lngMin) / (lngMax - lngMin);
 
@@ -103,24 +100,7 @@
             return { gridX, gridY };
         }
 
-        // Convert grid position to percentage on map (assuming map is 100x100% of its container)
-        function gridToMapPercentage(gridX, gridY, gridWidth, gridHeight) {
-            const x = (gridX / gridWidth) * 100;
-            const y = (gridY / gridHeight) * 100;
-            return { x, y };
-        }
-
-        // Show the user's current location on the map
-        function showLocationOnMap(lat, lng) {
-            const userGridPosition = gpsToGrid(lat, lng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
-            const { x, y } = gridToMapPercentage(userGridPosition.gridX, userGridPosition.gridY, gridWidth, gridHeight);
-
-            const dot = document.getElementById('location-dot');
-            dot.style.left = `${x}%`;
-            dot.style.top = `${y}%`;
-        }
-
-        // A* pathfinding algorithm (simplified for grid navigation)
+        // A* pathfinding algorithm
         function aStar(start, goal, grid) {
             const openSet = [start];
             const cameFrom = new Map();
@@ -139,7 +119,6 @@
                 const current = openSet.shift();
 
                 if (current.gridX === goal.gridX && current.gridY === goal.gridY) {
-                    // Reconstruct path
                     let totalPath = [current];
                     while (cameFrom.has(current)) {
                         current = cameFrom.get(current);
@@ -148,7 +127,6 @@
                     return totalPath;
                 }
 
-                // Process neighbors
                 const neighbors = getNeighbors(current, gridWidth, gridHeight);
                 for (let neighbor of neighbors) {
                     const tentativeGScore = gScore.get(current) + 1;
@@ -163,24 +141,42 @@
             return [];
         }
 
-        // Get neighbors in a grid (4 directions)
+        // Get neighbors while checking for walkable paths
         function getNeighbors(node, gridWidth, gridHeight) {
             const neighbors = [];
-            if (node.gridX > 0) neighbors.push({ gridX: node.gridX - 1, gridY: node.gridY });
-            if (node.gridX < gridWidth - 1) neighbors.push({ gridX: node.gridX + 1, gridY: node.gridY });
-            if (node.gridY > 0) neighbors.push({ gridX: node.gridX, gridY: node.gridY - 1 });
-            if (node.gridY < gridHeight - 1) neighbors.push({ gridX: node.gridX, gridY: node.gridY + 1 });
+            if (node.gridX > 0 && gridMatrix[node.gridY][node.gridX - 1] === 0) 
+                neighbors.push({ gridX: node.gridX - 1, gridY: node.gridY });
+            if (node.gridX < gridWidth - 1 && gridMatrix[node.gridY][node.gridX + 1] === 0) 
+                neighbors.push({ gridX: node.gridX + 1, gridY: node.gridY });
+            if (node.gridY > 0 && gridMatrix[node.gridY - 1][node.gridX] === 0) 
+                neighbors.push({ gridX: node.gridX, gridY: node.gridY - 1 });
+            if (node.gridY < gridHeight - 1 && gridMatrix[node.gridY + 1][node.gridX] === 0) 
+                neighbors.push({ gridX: node.gridX, gridY: node.gridY + 1 });
             return neighbors;
         }
 
-        // Convert grid position to AR coordinates (for visualization)
+        // Convert grid position to AR coordinates
         function gridToARPosition(gridX, gridY, gridWidth, gridHeight) {
             const x = (gridX / gridWidth) * 10 - 5;
             const z = (gridY / gridHeight) * 10 - 5;
             return { x, y: 0, z };
         }
 
-        // Clear previous path visualization in AR
+        // Visualize the path in AR
+        function visualizePathInAR(path) {
+            const scene = document.querySelector('a-scene');
+            path.forEach(position => {
+                const arPosition = gridToARPosition(position.gridX, position.gridY, gridWidth, gridHeight);
+                const arrow = document.createElement('a-cone');
+                arrow.setAttribute('position', `${arPosition.x} ${arPosition.y} ${arPosition.z}`);
+                arrow.setAttribute('radius-bottom', "0.175");
+                arrow.setAttribute('height', "0.2");
+                arrow.setAttribute('color', 'red');
+                scene.appendChild(arrow);
+            });
+        }
+
+        // Clear previous path visualization
         function clearPathInAR() {
             const scene = document.querySelector('a-scene');
             const arrows = scene.querySelectorAll('a-cone');
@@ -191,50 +187,68 @@
             });
         }
 
-        // Visualize the path in AR
-        function visualizePathInAR(path) {
-            clearPathInAR(); // Clear previous arrows
-            const scene = document.querySelector('a-scene');
-            path.forEach(position => {
-                const arPosition = gridToARPosition(position.gridX, position.gridY, gridWidth, gridHeight);
-                const arrow = document.createElement('a-cone');
-                arrow.setAttribute('position', `${arPosition.x} ${arPosition.y} ${arPosition.z}`);
-                arrow.setAttribute('radius-bottom', '0.05');
-                arrow.setAttribute('height', '0.2');
-                arrow.setAttribute('color', 'red');
-                arrow.setAttribute('rotation', '90 0 0');
-                scene.appendChild(arrow);
-            });
-        }
-
-        // Update the arrow's direction based on camera rotation
-        function updateArrowDirection() {
-            const cameraRotation = document.getElementById('camera').object3D.rotation;
+        // Update the arrow to point towards the destination
+        function updateArrowDirection(userLat, userLng) {
             const arrow = document.getElementById('arrow');
-            arrow.setAttribute('rotation', `0 ${THREE.Math.radToDeg(cameraRotation.y)} 90`);
+            const dx = destination.lng - userLng;
+            const dy = destination.lat - userLat;
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+            arrow.setAttribute('rotation', `${-angle} ${-angle} 0`);
         }
 
-        // Main logic when the user selects a room
-        document.getElementById('room-select').addEventListener('change', function () {
-            const roomCoordinates = this.value.split(',');
-            const roomLat = parseFloat(roomCoordinates[0]);
-            const roomLng = parseFloat(roomCoordinates[1]);
+        // Get user's position and calculate path
+        function getCurrentPosition() {
+            navigator.geolocation.watchPosition(position => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
 
-            getCurrentPosition((userLat, userLng) => {
-                const userPosition = gpsToGrid(userLat, userLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
-                const goalPosition = gpsToGrid(roomLat, roomLng, latMin, lngMin, latMax, lngMax, gridWidth, gridHeight);
+                const userPosition = gpsToGrid(userLat, userLng);
+                const goalPosition = gpsToGrid(destination.lat, destination.lng);
 
-                const grid = Array.from({ length: gridWidth }, () => Array(gridHeight).fill(0));
-                const path = aStar(userPosition, goalPosition, grid);
-                console.log('Path to goal:', path);  // Debugging log
+                const path = aStar(userPosition, goalPosition, gridMatrix);
 
+                clearPathInAR();
                 visualizePathInAR(path);
-                showLocationOnMap(userLat, userLng);
+                updateArrowDirection(userLat, userLng);
+
+                const locationDot = document.getElementById('location-dot');
+                const mapContainer = document.getElementById('map-container');
+                const normalizedX = (userLng - lngMin) / (lngMax - lngMin) * mapContainer.clientWidth;
+                const normalizedY = (1 - (userLat - latMin) / (latMax - latMin)) * mapContainer.clientHeight;
+                locationDot.style.left = `${normalizedX}px`;
+                locationDot.style.top = `${normalizedY}px`;
             });
+        }
+
+        document.getElementById('room-select').addEventListener('change', function() {
+            const coords = this.value.split(',');
+            const lat = parseFloat(coords[0]);
+            const lng = parseFloat(coords[1]);
+            
+            destination.lat = lat;
+            destination.lng = lng;
+
+            let roomURL = '';
+
+            switch (this.value) {
+                case "19.443582,72.799662":
+                    roomURL = 'https://didfu.github.io/303';
+                    break;
+                case "19.449607,72.804369":
+                    roomURL = 'https://didfu.github.io/309';
+                    break;
+                case "18.959680,72.809986":
+                    roomURL = 'https://didfu.github.io/305';
+                    break;
+                default:
+                    roomURL = 'https://didfu.github.io/';
+            }
+
+            window.location.href = roomURL;
         });
 
-        // Continuously update the arrow's direction
-        setInterval(updateArrowDirection, 100);
+        getCurrentPosition();
     </script>
 </body>
 </html>
