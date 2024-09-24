@@ -180,7 +180,6 @@
 
         function updateArrowDirection(userLat, userLng) {
             const arrow = document.getElementById('arrow');
-            const camera = document.getElementById('camera');
 
             // Calculate direction to the destination
             const dx = destination.lng - userLng;
@@ -189,20 +188,8 @@
             // Calculate the angle to rotate
             const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
-            // Place arrow directly in front of the camera
-            const cameraWorldPosition = new THREE.Vector3();
-            camera.object3D.getWorldPosition(cameraWorldPosition);
-            arrow.object3D.position.copy(cameraWorldPosition);
-            arrow.object3D.position.z -= 2; // Place it in front of the camera
-
             // Set arrow rotation based on angle
             arrow.setAttribute('rotation', `0 ${-angle} 0`); // Adjust Y rotation
-
-            // Start pathfinding when location updates
-            const userGridPos = gpsToGrid(userLat, userLng);
-            const goalGridPos = gpsToGrid(destination.lat, destination.lng);
-            path = aStar(userGridPos, goalGridPos);
-            updatePathVisuals(path);
         }
 
         function updatePathVisuals(path) {
@@ -223,6 +210,19 @@
 
         // Load grid map and set up everything
         loadGrid();
+
+        // Ticking to keep updating the arrow's direction
+        AFRAME.registerComponent('arrow-behavior', {
+            tick: function () {
+                const cameraEl = document.querySelector('#camera');
+                const arrowEl = document.querySelector('#arrow');
+                const cameraPos = cameraEl.object3D.position;
+
+                // Call updateArrowDirection with the camera's current lat/lng (converted if needed)
+                const userCoords = { lat: cameraPos.z, lng: cameraPos.x };  // Assumes z = lat, x = lng
+                updateArrowDirection(userCoords.lat, userCoords.lng);
+            }
+        });
         document.getElementById('room-select').addEventListener('change', function() {
             const coords = this.value.split(',');
             const lat = parseFloat(coords[0]);
@@ -246,7 +246,6 @@
             }
             window.location.href = roomURL;
         });
-
     </script>
 </body>
 </html>
