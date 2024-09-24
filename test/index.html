@@ -102,6 +102,10 @@
             const arrowDirection = new THREE.Vector3(0, 0, -1);
             const rotationQuaternion = new THREE.Quaternion().setFromUnitVectors(arrowDirection, direction);
 
+            // Rotate the arrow by 90 degrees around the Y-axis
+            const yRotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+            rotationQuaternion.multiply(yRotation); // Combine rotations
+
             arrow.object3D.position.set(0, 0, -5).applyMatrix4(camera.object3D.matrixWorld);
             arrow.object3D.setRotationFromQuaternion(rotationQuaternion);
         }
