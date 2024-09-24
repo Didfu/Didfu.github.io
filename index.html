@@ -70,10 +70,10 @@
     </a-scene>
 
     <script>
-        const destination = { lat: 19.443582, lng: 72.799662 };
+        const destination = { lat: 19.443582, lng: 72.799662 }; // Hardcoded destination
         let gridMatrix = [];
         let path = [];
-        
+
         // Load grid from local file
         async function loadGrid() {
             const response = await fetch('mapgrid.txt');
@@ -211,30 +211,18 @@
             locationDot.style.left = `${dotPosition.x * 100}px`; // Scale for visibility
             locationDot.style.top = `${dotPosition.z * 100}px`;  // Scale for visibility
 
-            // Optionally, you could create a visual representation of the path
-            // For example, by adding spheres or lines along the path in the AR scene
-            path.forEach((node, index) => {
-                if (index > 0) {
-                    const prevNode = path[index - 1];
-                    // Draw line or visual indication between prevNode and node
-                    // This could be a separate entity in A-Frame, etc.
-                }
-            });
+            // You can visualize other parts of the path here as needed.
         }
 
-        function getCurrentPosition() {
-            navigator.geolocation.watchPosition(position => {
-                const userLat = position.coords.latitude;
-                const userLng = position.coords.longitude;
-
-                updateArrowDirection(userLat, userLng);
-            });
-        }
-
-        loadGrid().then(() => {
-            getCurrentPosition();
+        // Geolocation setup
+        navigator.geolocation.watchPosition(position => {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+            updateArrowDirection(userLat, userLng);
         });
 
+        // Load grid map and set up everything
+        loadGrid();
         document.getElementById('room-select').addEventListener('change', function() {
             const coords = this.value.split(',');
             const lat = parseFloat(coords[0]);
@@ -245,7 +233,7 @@
             let roomURL = '';
             switch (this.value) {
                 case "19.443582,72.799662":
-                    roomURL = 'https://didfu.github.io';
+                    roomURL = 'https://didfu.github.io/303';
                     break;
                 case "19.449607,72.804369":
                     roomURL = 'https://didfu.github.io/309';
@@ -258,6 +246,7 @@
             }
             window.location.href = roomURL;
         });
+
     </script>
 </body>
 </html>
