@@ -1,0 +1,23 @@
+document.getElementById('room-select').addEventListener('change', function() {
+            const coords = this.value.split(',');
+            const lat = parseFloat(coords[0]);
+            const lng = parseFloat(coords[1]);
+            
+            destination.lat = lat;
+            destination.lng = lng;
+            let roomURL = '';
+            switch (this.value) {
+                case "19.443582,72.799662":
+                    roomURL = 'https://didfu.github.io/303';
+                    break;
+                case "19.449607,72.804369":
+                    roomURL = 'https://didfu.github.io/309';
+                    break;
+                case "18.959680,72.809986":
+                    roomURL = 'https://didfu.github.io/305';
+                    break;
+                default:
+                    roomURL = 'https://didfu.github.io/';
+            }
+            window.location.href = roomURL;
+        });
