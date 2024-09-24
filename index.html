@@ -154,8 +154,9 @@
 
         // Convert grid position to AR coordinates
         function gridToARPosition(gridX, gridY, gridWidth, gridHeight) {
-            const x = (gridX / gridWidth) * 10 - 5;  // Adjust the scale based on your AR space
-            const z = (gridY / gridHeight) * 10 - 5; // Adjust the scale based on your AR space
+            const scaleFactor = 10 / 999; // Scale factor for converting grid coordinates to meters
+            const x = (gridX * scaleFactor) - (10 / 2);  // Centering the AR space
+            const z = (gridY * scaleFactor) - (10 / 2); // Centering the AR space
             return { x, y: 0, z };
         }
 
@@ -184,29 +185,20 @@
             });
         }
 
-        // Update the arrow to point towards the destination
-        function updateArrowDirection(userLat, userLng) {
-            const arrow = document.getElementById('arrow');
-            const dx = destination.lng - userLng;
-            const dy = destination.lat - userLat;
-            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-
-            arrow.setAttribute('rotation', `${-angle} ${-angle} ${-angle}`); // Correct rotation for AR direction
-        }
-
-        // Get user's position and calculate path
+        // Get current position using Geolocation API
         function getCurrentPosition() {
-            navigator.geolocation.watchPosition(position => {
-                const userLat = position.coords.latitude;
-                const userLng = position.coords.longitude;
-                const userGridPos = gpsToGrid(userLat, userLng);
-                updateArrowDirection(userLat, userLng);
+            navigator.geolocation.watchPosition((position) => {
+                const userCoords = { lat: position.coords.latitude, lng: position.coords.longitude };
+                const userGridPos = gpsToGrid(userCoords.lat, userCoords.lng);
+                const arrow = document.getElementById('arrow');
+
+                const destinationGridPos = gpsToGrid(destination.lat, destination.lng);
+                const path = aStar(userGridPos, destinationGridPos, gridMatrix);
                 clearPathInAR();
-                const goalGridPos = gpsToGrid(destination.lat, destination.lng);
-                const path = aStar(userGridPos, goalGridPos, gridMatrix);
                 visualizePathInAR(path);
-                const locationDot = document.getElementById('location-dot');
+                
                 const dotPosition = gridToARPosition(userGridPos.gridX, userGridPos.gridY, gridWidth, gridHeight);
+                const locationDot = document.getElementById('location-dot');
                 locationDot.style.left = `${dotPosition.x}px`;
                 locationDot.style.top = `${dotPosition.z}px`;
             });
@@ -216,6 +208,7 @@
         loadGrid().then(() => {
             getCurrentPosition();
         });
+
         document.getElementById('room-select').addEventListener('change', function() {
             const coords = this.value.split(',');
             const lat = parseFloat(coords[0]);
