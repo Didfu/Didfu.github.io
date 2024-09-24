@@ -80,11 +80,11 @@
             gridMatrix = text.trim().split('\n').map(line => line.split(' ').map(Number)); // Parse grid data
         }
 
-        const gridWidth = 999; // Set grid width to 999
-        const gridHeight = 999; // Set grid height to 999
+        const gridWidth = 999; // Set grid width
+        const gridHeight = 999; // Set grid height
 
-        const latMin = 18.9570, lngMin = 72.8090;  // Min coordinates of the map area
-        const latMax = 18.9600, lngMax = 72.8100;  // Max coordinates of the map area
+        const latMin = 18.9570, lngMin = 72.7990;  // Min coordinates of the map area
+        const latMax = 19.4500, lngMax = 72.8100;  // Max coordinates of the map area
 
         // Convert GPS coordinates to grid position
         function gpsToGrid(lat, lng) {
@@ -154,8 +154,8 @@
 
         // Convert grid position to AR coordinates
         function gridToARPosition(gridX, gridY, gridWidth, gridHeight) {
-            const x = (gridX / gridWidth) * 20 - 10; // Adjust range based on grid size
-            const z = (gridY / gridHeight) * 20 - 10; // Adjust range based on grid size
+            const x = (gridX / gridWidth) * 10 - 5;  // Adjust the scale based on your AR space
+            const z = (gridY / gridHeight) * 10 - 5; // Adjust the scale based on your AR space
             return { x, y: 0, z };
         }
 
@@ -191,7 +191,7 @@
             const dy = destination.lat - userLat;
             const angle = Math.atan2(dy, dx) * 180 / Math.PI;
 
-            arrow.setAttribute('rotation', `${-angle} ${-angle} 0`);
+            arrow.setAttribute('rotation', `${-angle} 0 0`); // Updated rotation for AR direction
         }
 
         // Get user's position and calculate path
@@ -209,17 +209,13 @@
                 const dotPosition = gridToARPosition(userGridPos.gridX, userGridPos.gridY, gridWidth, gridHeight);
                 locationDot.style.left = `${dotPosition.x}px`;
                 locationDot.style.top = `${dotPosition.z}px`;
-            }, error => {
-                console.error('Error getting position:', error);
-                alert('Unable to retrieve your location. Please check your location settings.');
             });
         }
 
-        // Initialize the application
-        async function init() {
-            await loadGrid();
+        // Load the grid and start the location tracking
+        loadGrid().then(() => {
             getCurrentPosition();
-        }
+        });
         document.getElementById('room-select').addEventListener('change', function() {
             const coords = this.value.split(',');
             const lat = parseFloat(coords[0]);
@@ -243,7 +239,6 @@
             }
             window.location.href = roomURL;
         });
-        window.onload = init;
     </script>
 </body>
 </html>
