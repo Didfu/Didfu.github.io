@@ -191,7 +191,7 @@
             const dy = destination.lat - userLat;
             const angle = Math.atan2(dy, dx) * 180 / Math.PI;
 
-            arrow.setAttribute('rotation', `0 ${-angle} 0`); // Correct rotation for AR direction
+            arrow.setAttribute('rotation', `${-angle} ${-angle} ${-angle}`); // Correct rotation for AR direction
         }
 
         // Get user's position and calculate path
