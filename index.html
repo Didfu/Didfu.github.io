@@ -68,181 +68,177 @@
             <a-cone id="arrow" radius-bottom="0.175" height="0.2" color="red" position="0 0 -2"></a-cone>
         </a-camera>
     </a-scene>
+<script>
+const destination = { lat: 19.443582, lng: 72.799662 }; // Hardcoded destination
+let gridMatrix = [];
 
-    <script>
-        const destination = { lat: 19.443582, lng: 72.799662 }; // Hardcoded destination
-        let gridMatrix = [];
+// Load grid from local file
+async function loadGrid() {
+    const response = await fetch('mapgrid.txt');
+    const text = await response.text();
+    gridMatrix = text.trim().split('\n').map(line => line.split(' ').map(Number));
+}
 
-        // Load grid from local file
-        async function loadGrid() {
-            const response = await fetch('mapgrid.txt');
-            const text = await response.text();
-            gridMatrix = text.trim().split('\n').map(line => line.split(' ').map(Number));
-        }
+const gridWidth = 999;
+const gridHeight = 999;
 
-        const gridWidth = 999;
-        const gridHeight = 999;
+const latMin = 18.9570, lngMin = 72.7990;
+const latMax = 19.4500, lngMax = 72.8100;
 
-        const latMin = 18.9570, lngMin = 72.7990;
-        const latMax = 19.4500, lngMax = 72.8100;
+function gpsToGrid(lat, lng) {
+    const normalizedLat = (lat - latMin) / (latMax - latMin);
+    const normalizedLng = (lng - lngMin) / (lngMax - lngMin);
+    const gridX = Math.floor(normalizedLng * gridWidth);
+    const gridY = Math.floor((1 - normalizedLat) * gridHeight);
+    return { gridX, gridY };
+}
 
-        function gpsToGrid(lat, lng) {
-            const normalizedLat = (lat - latMin) / (latMax - latMin);
-            const normalizedLng = (lng - lngMin) / (lngMax - lngMin);
-            const gridX = Math.floor(normalizedLng * gridWidth);
-            const gridY = Math.floor((1 - normalizedLat) * gridHeight);
-            return { gridX, gridY };
-        }
+function gridToARPosition(gridX, gridY) {
+    const x = (gridX / gridWidth) * 2 - 1;  // Adjust the scale based on your AR space
+    const z = (gridY / gridHeight) * 2 - 1; // Adjust the scale based on your AR space
+    return { x, y: 0, z };
+}
 
-        function gridToARPosition(gridX, gridY) {
-            const x = (gridX / gridWidth) * 2 - 1;  // Adjust the scale based on your AR space
-            const z = (gridY / gridHeight) * 2 - 1; // Adjust the scale based on your AR space
-            return { x, y: 0, z };
-        }
+// Update arrow's rotation to point toward the destination
+function updateArrowDirection(userLat, userLng) {
+    const arrow = document.getElementById('arrow');
 
-        // A* pathfinding algorithm
-        function aStar(start, goal) {
-            const openSet = new Set();
-            const cameFrom = new Map();
-            const gScore = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(Infinity));
-            const fScore = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(Infinity));
-            gScore[start.y][start.x] = 0;
-            fScore[start.y][start.x] = heuristic(start, goal);
+    // Calculate direction to the destination
+    const dx = destination.lng - userLng;
+    const dy = destination.lat - userLat;
 
-            openSet.add(`${start.x},${start.y}`);
+    // Calculate the angle to rotate, ensuring it's in degrees
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
-            while (openSet.size > 0) {
-                let current = [...openSet].reduce((lowest, coord) => {
-                    const [x, y] = coord.split(',').map(Number);
-                    if (fScore[y][x] < fScore[lowest.y][lowest.x]) {
-                        return { x, y };
-                    }
-                    return lowest;
-                }, { x: start.x, y: start.y });
+    // Set arrow rotation based on angle
+    arrow.setAttribute('rotation', `0 ${-angle} 0`); // Adjust Y rotation
+}
 
-                if (current.x === goal.x && current.y === goal.y) {
-                    return reconstructPath(cameFrom, current);
-                }
+// Update the blue dot on the map to reflect the user's location
+function updateUserLocationOnMap(userLat, userLng) {
+    const mapContainer = document.getElementById('map-container');
+    const locationDot = document.getElementById('location-dot');
+    
+    // Get the user's position in terms of grid coordinates
+    const { gridX, gridY } = gpsToGrid(userLat, userLng);
 
-                openSet.delete(`${current.x},${current.y}`);
+    // Calculate position in pixels (assuming map is 200x200 pixels)
+    const mapWidth = mapContainer.clientWidth;
+    const mapHeight = mapContainer.clientHeight;
 
-                for (const neighbor of getNeighbors(current)) {
-                    const tentativeGScore = gScore[current.y][current.x] + 1;
-                    if (tentativeGScore < gScore[neighbor.y][neighbor.x]) {
-                        cameFrom.set(`${neighbor.x},${neighbor.y}`, current);
-                        gScore[neighbor.y][neighbor.x] = tentativeGScore;
-                        fScore[neighbor.y][neighbor.x] = gScore[neighbor.y][neighbor.x] + heuristic(neighbor, goal);
-                        openSet.add(`${neighbor.x},${neighbor.y}`);
-                    }
-                }
+    // Map grid coordinates to pixel position on the map
+    const dotX = (gridX / gridWidth) * mapWidth;
+    const dotY = (gridY / gridHeight) * mapHeight;
+
+    // Update the position of the dot
+    locationDot.style.left = `${dotX}px`;
+    locationDot.style.top = `${dotY}px`;
+}
+
+// A* pathfinding algorithm
+function aStar(start, goal) {
+    const openSet = new Set();
+    const cameFrom = new Map();
+    const gScore = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(Infinity));
+    const fScore = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(Infinity));
+    gScore[start.y][start.x] = 0;
+    fScore[start.y][start.x] = heuristic(start, goal);
+
+    openSet.add(`${start.x},${start.y}`);
+
+    while (openSet.size > 0) {
+        let current = [...openSet].reduce((lowest, coord) => {
+            const [x, y] = coord.split(',').map(Number);
+            if (fScore[y][x] < fScore[lowest.y][lowest.x]) {
+                return { x, y };
             }
+            return lowest;
+        }, { x: start.x, y: start.y });
 
-            return []; // No path found
+        if (current.x === goal.x && current.y === goal.y) {
+            return reconstructPath(cameFrom, current);
         }
 
-        function heuristic(a, b) {
-            return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); // Manhattan distance
-        }
+        openSet.delete(`${current.x},${current.y}`);
 
-        function getNeighbors(node) {
-            const neighbors = [];
-            const directions = [
-                { x: 0, y: 1 },  // Up
-                { x: 1, y: 0 },  // Right
-                { x: 0, y: -1 }, // Down
-                { x: -1, y: 0 }, // Left
-            ];
-
-            for (const dir of directions) {
-                const newX = node.x + dir.x;
-                const newY = node.y + dir.y;
-
-                if (newX >= 0 && newX < gridWidth && newY >= 0 && newY < gridHeight && gridMatrix[newY][newX] === 0) {
-                    neighbors.push({ x: newX, y: newY });
-                }
+        for (const neighbor of getNeighbors(current)) {
+            const tentativeGScore = gScore[current.y][current.x] + 1;
+            if (tentativeGScore < gScore[neighbor.y][neighbor.x]) {
+                cameFrom.set(`${neighbor.x},${neighbor.y}`, current);
+                gScore[neighbor.y][neighbor.x] = tentativeGScore;
+                fScore[neighbor.y][neighbor.x] = gScore[neighbor.y][neighbor.x] + heuristic(neighbor, goal);
+                openSet.add(`${neighbor.x},${neighbor.y}`);
             }
-
-            return neighbors;
         }
+    }
 
-        function reconstructPath(cameFrom, current) {
-            const totalPath = [current];
-            while (cameFrom.has(`${current.x},${current.y}`)) {
-                current = cameFrom.get(`${current.x},${current.y}`);
-                totalPath.push(current);
-            }
-            return totalPath.reverse();
+    return []; // No path found
+}
+
+function heuristic(a, b) {
+    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); // Manhattan distance
+}
+
+function getNeighbors(node) {
+    const neighbors = [];
+    const directions = [
+        { x: 0, y: 1 },  // Up
+        { x: 1, y: 0 },  // Right
+        { x: 0, y: -1 }, // Down
+        { x: -1, y: 0 }, // Left
+    ];
+
+    for (const dir of directions) {
+        const newX = node.x + dir.x;
+        const newY = node.y + dir.y;
+
+        if (newX >= 0 && newX < gridWidth && newY >= 0 && newY < gridHeight && gridMatrix[newY][newX] === 0) {
+            neighbors.push({ x: newX, y: newY });
         }
+    }
 
-        function updateArrowDirection(userLat, userLng) {
-            const arrow = document.getElementById('arrow');
+    return neighbors;
+}
 
-            // Calculate direction to the destination
-            const dx = destination.lng - userLng;
-            const dy = destination.lat - userLat;
+function reconstructPath(cameFrom, current) {
+    const totalPath = [current];
+    while (cameFrom.has(`${current.x},${current.y}`)) {
+        current = cameFrom.get(`${current.x},${current.y}`);
+        totalPath.push(current);
+    }
+    return totalPath.reverse();
+}
 
-            // Calculate the angle to rotate, ensuring it's in degrees
-            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+function updatePathVisuals(path) {
+    const locationDot = document.getElementById('location-dot');
+    const dotPosition = gridToARPosition(path[0].x, path[0].y);
+    locationDot.style.left = `${dotPosition.x * 100}px`; // Scale for visibility
+    locationDot.style.top = `${dotPosition.z * 100}px`;  // Scale for visibility
+}
 
-            // Set arrow rotation based on angle
-            arrow.setAttribute('rotation', `0 ${-angle} 0`); // Adjust Y rotation
-        }
+// Geolocation setup
+navigator.geolocation.watchPosition(position => {
+    const userLat = position.coords.latitude;
+    const userLng = position.coords.longitude;
+    
+    // Update user location on map
+    updateUserLocationOnMap(userLat, userLng);
 
-        function updatePathVisuals(path) {
-            const locationDot = document.getElementById('location-dot');
-            const dotPosition = gridToARPosition(path[0].x, path[0].y);
-            locationDot.style.left = `${dotPosition.x * 100}px`; // Scale for visibility
-            locationDot.style.top = `${dotPosition.z * 100}px`;  // Scale for visibility
-        }
+    // Update arrow direction
+    updateArrowDirection(userLat, userLng);
 
-        // Geolocation setup
-        navigator.geolocation.watchPosition(position => {
-            const userLat = position.coords.latitude;
-            const userLng = position.coords.longitude;
-            updateArrowDirection(userLat, userLng);
-        });
+    // Update pathfinding (example: hardcoding the destination grid coordinates for now)
+    const userGrid = gpsToGrid(userLat, userLng);
+    const goalGrid = gpsToGrid(destination.lat, destination.lng);
+    const path = aStar(userGrid, goalGrid);
 
-        // Load grid map and set up everything
-        loadGrid();
-
-        // Ticking to keep updating the arrow's direction
-        AFRAME.registerComponent('arrow-behavior', {
-            tick: function () {
-                const cameraEl = document.querySelector('#camera');
-                const cameraPos = cameraEl.object3D.position;
-
-                // Call updateArrowDirection with the camera's current lat/lng (converted if needed)
-                const userCoords = { lat: cameraPos.z, lng: cameraPos.x };  // Assumes z = lat, x = lng
-                updateArrowDirection(userCoords.lat, userCoords.lng);
-            }
-        });
-
-        document.getElementById('room-select').addEventListener('change', function() {
-            const coords = this.value.split(',');
-            const lat = parseFloat(coords[0]);
-            const lng = parseFloat(coords[1]);
-            
-            destination.lat = lat;
-            destination.lng = lng;
-            let roomURL = '';
-            switch (this.value) {
-                case "19.443582,72.799662":
-                    roomURL = "room_303.jpg";
-                    break;
-                case "19.449607,72.804369":
-                    roomURL = "room_309.jpg";
-                    break;
-                case "18.959680,72.809986":
-                    roomURL = "room_305.jpg";
-                    break;
-            }
-            document.getElementById('map').src = roomURL; // Update map based on selected room
-            const start = gpsToGrid(userCoords.lat, userCoords.lng);
-            const goal = gpsToGrid(lat, lng);
-            const path = aStar(start, goal);
-            updatePathVisuals(path);
-        });
-        document.getElementById('room-select').addEventListener('change', function() {
+    if (path.length > 0) {
+        updatePathVisuals(path);
+    }
+}, error => {
+    console.error(error);
+});
+document.getElementById('room-select').addEventListener('change', function() {
             const coords = this.value.split(',');
             const lat = parseFloat(coords[0]);
             const lng = parseFloat(coords[1]);
@@ -265,6 +261,6 @@
             }
             window.location.href = roomURL;
         });
-    </script>
+</script>
 </body>
 </html>
