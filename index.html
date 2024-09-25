@@ -103,7 +103,7 @@ function gridToARPosition(gridX, gridY) {
 function updateArrowDirection(userLat, userLng) {
     const arrow = document.getElementById('arrow');
 
-    // Calculate direction to the destination
+    // Calculate direction to the dest
     const dx = destination.lng - userLng;
     const dy = destination.lat - userLat;
 
@@ -111,7 +111,7 @@ function updateArrowDirection(userLat, userLng) {
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
     // Set arrow rotation based on angle
-    arrow.setAttribute('rotation', `${angle} ${angle} ${-angle}`); // Adjust Y rotation
+    arrow.object3D.rotation.set(0, THREE.Math.degToRad(angle), 0); // Adjust Y rotation dynamically
 }
 
 // Update the blue dot on the map to reflect the user's location
