@@ -111,7 +111,7 @@ function updateArrowDirection(userLat, userLng) {
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
     // Set arrow rotation based on angle
-    arrow.setAttribute('rotation', `${-angle} 0 0`); // Adjust Y rotation
+    arrow.setAttribute('rotation', `0 0 ${-angle}`); // Adjust Y rotation
 }
 
 // Update the blue dot on the map to reflect the user's location
