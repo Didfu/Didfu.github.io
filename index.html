@@ -65,7 +65,7 @@
         </a-marker>
 
         <a-camera id="camera" position="0 0 0" look-controls>
-            <a-cone id="arrow" radius-bottom="0.175" height="0.2" color="red" position="0 0 -2"></a-cone>
+            <a-cone id="arrow" radius-bottom="0.175" height="0.2" color="red" position= "0 -0.2 -3"></a-cone>
         </a-camera>
     </a-scene>
 <script>
@@ -111,7 +111,7 @@ function updateArrowDirection(userLat, userLng) {
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
     // Set arrow rotation based on angle
-    arrow.setAttribute('rotation', `${-angle} ${angle} ${-angle}`); // Adjust Y rotation
+    arrow.setAttribute('rotation', `${angle} ${angle} ${-angle}`); // Adjust Y rotation
 }
 
 // Update the blue dot on the map to reflect the user's location
@@ -248,7 +248,7 @@ document.getElementById('room-select').addEventListener('change', function() {
             let roomURL = '';
             switch (this.value) {
                 case "19.443582,72.799662":
-                    roomURL = 'https://didfu.github.io/303';
+                    roomURL = 'https://didfu.github.io/';
                     break;
                 case "19.449607,72.804369":
                     roomURL = 'https://didfu.github.io/309';
