@@ -42,6 +42,21 @@
             border-radius: 50%;
             transform: translate(-50%, -50%);
         }
+
+        <!-- Matomo -->
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://apsitardashboardvercelapp.matomo.cloud/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '5']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src='https://cdn.matomo.cloud/apsitardashboardvercelapp.matomo.cloud/matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+<!-- End Matomo Code -->
+
     </style>
 </head>
 <body>
